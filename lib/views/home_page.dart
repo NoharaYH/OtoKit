@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../constants/app_assets.dart';
 import '../config/game_config.dart';
 import '../providers/game_provider.dart';
+import '../core/di/injection.dart';
 
 // Components
 import '../widgets/transfer_mode_card.dart';
@@ -43,8 +44,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _checkLoginStatus() async {
-    final maiCookie = await StorageService.read(StorageService.kMaimaiCookie);
-    final chuniCookie = await StorageService.read(
+    final maiCookie = await getIt<StorageService>().read(
+      StorageService.kMaimaiCookie,
+    );
+    final chuniCookie = await getIt<StorageService>().read(
       StorageService.kChunithmCookie,
     );
     if (mounted) {

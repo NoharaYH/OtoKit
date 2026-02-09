@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:injectable/injectable.dart';
 import '../services/storage_service.dart';
 import '../services/api_service.dart';
 
+@injectable
 class TransferProvider extends ChangeNotifier {
+  final ApiService _apiService;
+  final StorageService _storageService;
+
   // Controllers for input fields
   final TextEditingController dfController = TextEditingController();
   final TextEditingController lxnsController = TextEditingController();
@@ -25,7 +30,7 @@ class TransferProvider extends ChangeNotifier {
   // We can manage mode per game type here or let UI pass it in.
   // For simplicity, let's keep mode in UI for now or separate it if it becomes complex.
 
-  TransferProvider() {
+  TransferProvider(this._apiService, this._storageService) {
     _loadTokens();
   }
 
@@ -37,8 +42,8 @@ class TransferProvider extends ChangeNotifier {
   }
 
   Future<void> _loadTokens() async {
-    final df = await StorageService.read(StorageService.kDivingFishToken);
-    final lxns = await StorageService.read(StorageService.kLxnsToken);
+    final df = await _storageService.read(StorageService.kDivingFishToken);
+    final lxns = await _storageService.read(StorageService.kLxnsToken);
 
     if (df != null && df.isNotEmpty) {
       dfController.text = df;
@@ -102,7 +107,9 @@ class TransferProvider extends ChangeNotifier {
 
       // 2. Remote Verification (DF)
       if (needsDf && !dfSuccess) {
-        dfSuccess = await ApiService.validateDivingFishToken(dfController.text);
+        dfSuccess = await _apiService.validateDivingFishToken(
+          dfController.text,
+        );
         if (!dfSuccess) {
           _errorMessage = "水鱼 Token 验证失败";
           _isLoading = false;
@@ -113,7 +120,7 @@ class TransferProvider extends ChangeNotifier {
 
       // 3. Remote Verification (LXNS)
       if (needsLxns && !lxnsSuccess) {
-        lxnsSuccess = await ApiService.validateLxnsToken(lxnsController.text);
+        lxnsSuccess = await _apiService.validateLxnsToken(lxnsController.text);
         if (!lxnsSuccess) {
           _errorMessage = "落雪 Token 验证失败";
           _isLoading = false;
@@ -127,13 +134,13 @@ class TransferProvider extends ChangeNotifier {
       _isLxnsVerified = lxnsSuccess;
 
       if (dfSuccess) {
-        await StorageService.save(
+        await _storageService.save(
           StorageService.kDivingFishToken,
           dfController.text,
         );
       }
       if (lxnsSuccess) {
-        await StorageService.save(
+        await _storageService.save(
           StorageService.kLxnsToken,
           lxnsController.text,
         );

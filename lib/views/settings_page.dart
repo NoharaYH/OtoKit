@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
+import '../core/di/injection.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -20,8 +21,12 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final dfToken = await StorageService.read(StorageService.kDivingFishToken);
-    final lxnsToken = await StorageService.read(StorageService.kLxnsToken);
+    final dfToken = await getIt<StorageService>().read(
+      StorageService.kDivingFishToken,
+    );
+    final lxnsToken = await getIt<StorageService>().read(
+      StorageService.kLxnsToken,
+    );
 
     if (mounted) {
       setState(() {
@@ -33,11 +38,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _saveSettings() async {
-    await StorageService.save(
+    await getIt<StorageService>().save(
       StorageService.kDivingFishToken,
       _dfTokenController.text,
     );
-    await StorageService.save(
+    await getIt<StorageService>().save(
       StorageService.kLxnsToken,
       _lxnsTokenController.text,
     );

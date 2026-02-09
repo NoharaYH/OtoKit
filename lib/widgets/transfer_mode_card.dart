@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/transfer_provider.dart';
 import 'transfer_page_maimaidx.dart';
 import 'transfer_page_chunithm.dart';
+import 'transfer_content_animator.dart';
 
 class TransferModeCard extends StatefulWidget {
   final Color baseColor;
@@ -91,27 +92,12 @@ class _TransferModeCardState extends State<TransferModeCard> {
               ),
 
               // Content Area
-              AnimatedSize(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeInOut,
-                alignment: Alignment.topCenter,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 500),
-                    reverseDuration: const Duration(milliseconds: 100),
-                    switchInCurve: const Interval(
-                      0.4,
-                      1.0,
-                      curve: Curves.easeOut,
-                    ),
-                    switchOutCurve: Curves.easeIn,
-                    child: showSuccessPage
-                        ? _buildSuccessView(provider)
-                        : _buildInputView(provider, needsDf, needsLxns),
-                  ),
-                ),
+              // Content Area
+              TransferContentAnimator(
+                duration: const Duration(milliseconds: 300),
+                child: showSuccessPage
+                    ? _buildSuccessView(provider)
+                    : _buildInputView(provider, needsDf, needsLxns),
               ),
             ],
           ),

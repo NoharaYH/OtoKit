@@ -1,21 +1,17 @@
 import 'package:dio/dio.dart';
 import 'package:html/parser.dart' show parse;
+import 'package:injectable/injectable.dart';
 import '../services/storage_service.dart';
 
+@lazySingleton
 class ApiService {
-  static final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        "User-Agent":
-            "Mozilla/5.0 (Linux; Android 13; KB2000 Build/UKQ1.230917.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 XWEB/1160065 MMWEBSDK/20231202 MMWEBID/2143 MicroMessenger/8.0.47.2560(0x28002F30) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64",
-      },
-    ),
-  );
+  final Dio _dio;
+  final StorageService _storageService;
+
+  ApiService(this._dio, this._storageService);
 
   // Validate Diving Fish Token (Read-Only)
-  static Future<bool> validateDivingFishToken(String token) async {
+  Future<bool> validateDivingFishToken(String token) async {
     try {
       // Use records endpoint to verify token validity
       // This is safe as it's a GET request
@@ -36,7 +32,7 @@ class ApiService {
   }
 
   // Validate LXNS Token (Read-Only)
-  static Future<bool> validateLxnsToken(String token) async {
+  Future<bool> validateLxnsToken(String token) async {
     try {
       final response = await _dio.get(
         "https://maimai.lxns.net/api/v0/user/maimai/player",
@@ -49,11 +45,11 @@ class ApiService {
   }
 
   // Sync Maimai (Return status message)
-  static Future<String> syncMaimai() async {
+  Future<String> syncMaimai() async {
     // 1. Get Credentials
-    final cookie = await StorageService.read(StorageService.kMaimaiCookie);
-    final dfToken = await StorageService.read(StorageService.kDivingFishToken);
-    final lxnsToken = await StorageService.read(StorageService.kLxnsToken);
+    final cookie = await _storageService.read(StorageService.kMaimaiCookie);
+    final dfToken = await _storageService.read(StorageService.kDivingFishToken);
+    final lxnsToken = await _storageService.read(StorageService.kLxnsToken);
 
     if (cookie == null) return "请先登录舞萌 DX";
     if (dfToken == null && lxnsToken == null) return "请至少配置一个查分器 Token";
@@ -111,9 +107,9 @@ class ApiService {
   }
 
   // Sync Chunithm
-  static Future<String> syncChunithm() async {
-    final cookie = await StorageService.read(StorageService.kChunithmCookie);
-    final dfToken = await StorageService.read(StorageService.kDivingFishToken);
+  Future<String> syncChunithm() async {
+    final cookie = await _storageService.read(StorageService.kChunithmCookie);
+    final dfToken = await _storageService.read(StorageService.kDivingFishToken);
 
     if (cookie == null) return "请先登录中二节奏";
     if (dfToken == null) return "请先配置水鱼 Token";

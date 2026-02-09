@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'core/di/injection.dart';
 import 'views/home_page.dart';
 import 'providers/game_provider.dart';
 import 'providers/transfer_provider.dart';
 
 void main() {
+  configureDependencies();
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => GameProvider()),
-        ChangeNotifierProvider(create: (_) => TransferProvider()),
+        ChangeNotifierProvider(create: (_) => getIt<TransferProvider>()),
       ],
       child: const MyApp(),
     ),
