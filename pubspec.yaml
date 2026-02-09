@@ -70,6 +70,7 @@ flutter:
     - assets/background/chunithm/
     - assets/background/maimaidx/
     - assets/logo/
+    - assets/background/maimaidx/difficulty/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -97,6 +98,9 @@ flutter:
     - family: GameFont
       fonts:
         - asset: assets/font/RoGSanSrfStd-UB.otf
+    - family: JiangCheng
+      fonts:
+        - asset: assets/font/江城圆体 500W.ttf
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'core/di/injection.dart';
-import 'views/home_page.dart';
-import 'providers/game_provider.dart';
-import 'providers/transfer_provider.dart';
+import 'kernel/di/injection.dart';
+import 'ui/pages/home/home_page.dart';
+import 'kernel/state/game_provider.dart';
+import 'kernel/state/transfer_provider.dart';
+import 'kernel/state/toast_provider.dart';
+import 'ui/kit/components/molecules/toast/toast_manager.dart';
 
 void main() {
   configureDependencies();
@@ -12,6 +14,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => GameProvider()),
         ChangeNotifierProvider(create: (_) => getIt<TransferProvider>()),
+        ChangeNotifierProvider(create: (_) => ToastProvider()),
       ],
       child: const MyApp(),
     ),
@@ -27,10 +30,11 @@ class MyApp extends StatelessWidget {
       title: 'MaiChuniSync',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        fontFamily: 'JiangCheng',
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const ToastOverlay(child: HomePage()),
     );
   }
 }
