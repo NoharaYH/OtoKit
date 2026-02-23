@@ -237,39 +237,46 @@ class _HomePageState extends State<HomePage> {
         right: size.width * 0.05,
         bottom: 0,
       ),
-      child: Column(
-        children: [
-          // Logo Area with Watermark
-          SizedBox(
-            height: 100,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Watermark Text (Behind)
-                Positioned(
-                  top: 32,
-                  child: Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontFamily: 'GameFont',
-                      fontSize: 34,
-                      fontWeight: FontWeight.normal,
-                      color: themeColor.withValues(alpha: 0.2),
-                      letterSpacing: -1.0,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Column(
+          children: [
+            // Logo Area with Watermark
+            SizedBox(
+              height: 100,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Watermark Text (Behind)
+                  Positioned(
+                    top: 32,
+                    child: Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'GameFont',
+                        fontSize: 34,
+                        fontWeight: FontWeight.normal,
+                        color: themeColor.withValues(alpha: 0.2),
+                        letterSpacing: -1.0,
+                      ),
                     ),
                   ),
-                ),
-                // Logo Image (In Front)
-                Align(
-                  alignment: Alignment.center,
-                  child: Image.asset(logoPath, height: 80, fit: BoxFit.contain),
-                ),
-              ],
+                  // Logo Image (In Front)
+                  Align(
+                    alignment: Alignment.center,
+                    child: Image.asset(
+                      logoPath,
+                      height: 80,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          if (child != null) ...[SizedBox(height: gapHeight), child],
-        ],
+            if (child != null) ...[SizedBox(height: gapHeight), child],
+          ],
+        ),
       ),
     );
   }

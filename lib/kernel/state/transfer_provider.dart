@@ -19,6 +19,7 @@ class TransferProvider extends ChangeNotifier {
   bool _isDivingFishVerified = false;
   bool _isLxnsVerified = false;
   bool _isVpnRunning = false;
+  bool _isTracking = false;
   String? _errorMessage;
   String? _successMessage;
   String _vpnLog = "";
@@ -31,6 +32,7 @@ class TransferProvider extends ChangeNotifier {
   bool get isDivingFishVerified => _isDivingFishVerified;
   bool get isLxnsVerified => _isLxnsVerified;
   bool get isVpnRunning => _isVpnRunning;
+  bool get isTracking => _isTracking;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
   String get vpnLog => _vpnLog;
@@ -79,6 +81,36 @@ class TransferProvider extends ChangeNotifier {
 
   Future<void> stopVpn() async {
     await _channel.invokeMethod('stopVpn');
+    _isTracking = false;
+    notifyListeners();
+  }
+
+  void startTracking() {
+    _isTracking = true;
+    notifyListeners();
+  }
+
+  void stopTracking() {
+    _isTracking = false;
+    notifyListeners();
+  }
+
+  Future<void> startImport() async {
+    // 1. 启动 VPN
+    await startVpn();
+
+    // 2. 复制链接 (模拟获取授权链接，实际可能由 native 或 API 提供)
+    // 根据 DataContext.HookHost 逻辑，这里模拟一个
+    const authUrl = "http://maimai.com.cn/auth";
+    await Clipboard.setData(const ClipboardData(text: authUrl));
+
+    // 3. 开启跟踪模式并初始化日志
+    _isTracking = true;
+    _vpnLog = "[SYSTEM] 开始准备环境...\n";
+    _vpnLog += "[VPN] 服务已启动，正在监听网络包\n";
+    _vpnLog += "[CLIPBOARD] 授权链接已复制，请前往微信访问\n";
+
+    notifyListeners();
   }
 
   @override

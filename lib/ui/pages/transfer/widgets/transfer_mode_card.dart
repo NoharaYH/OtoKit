@@ -11,6 +11,7 @@ import '../../../../ui/design_system/kit_score_sync/content_animator.dart';
 import '../../../../ui/design_system/kit_shared/confirm_button.dart';
 import 'transfer_page_maimaidx.dart';
 import 'transfer_page_chunithm.dart';
+import '../../../../ui/design_system/kit_score_sync/sync_log_panel.dart';
 
 // Note: Ensure Animator is accessible. It was moved to ui/kit/components/molecules.
 
@@ -80,10 +81,29 @@ class _TransferModeCardState extends State<TransferModeCard> {
                   ? _buildSuccessView(provider, skin)
                   : _buildInputView(provider, needsDf, needsLxns, skin));
 
-        return Container(
+        final size = MediaQuery.of(context).size;
+        final viewPadding = MediaQuery.of(context).padding;
+
+        // 【对齐 HomePage】顶部总偏移 = 0.05H (cardTopStart) + 130 (Logo Area + Gap)
+        final topOffset = (size.height * 0.05) + 130;
+
+        // 【锁定 3% 黄金间距】距屏幕底边 3% 屏高
+        final bottomOffset = viewPadding.bottom + (size.height * 0.03);
+        final targetHeight = size.height - topOffset - bottomOffset;
+
+        return AnimatedContainer(
+          key: const ValueKey('TransferCardMainContainer'),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.fastOutSlowIn,
           width: double.infinity,
-          margin: const EdgeInsets.symmetric(
-            horizontal: UiSizes.defaultPadding,
+          margin: EdgeInsets.only(
+            left: UiSizes.defaultPadding,
+            right: UiSizes.defaultPadding,
+            bottom: bottomOffset,
+          ),
+          constraints: BoxConstraints(
+            minHeight: provider.isTracking ? targetHeight : 0,
+            maxHeight: provider.isTracking ? targetHeight : 1000,
           ),
           decoration: BoxDecoration(
             color: const Color(0xCCFFFFFF),
@@ -91,38 +111,59 @@ class _TransferModeCardState extends State<TransferModeCard> {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Tab Selector
-              Container(
-                height: 50,
-                margin: const EdgeInsets.all(UiSizes.cardInnerPadding),
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: skin.medium.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(25),
+          child: SingleChildScrollView(
+            physics: provider.isTracking
+                ? const BouncingScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Tab Selector
+                Container(
+                  height: 50,
+                  margin: const EdgeInsets.all(UiSizes.cardInnerPadding),
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: skin.medium.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildModeTab(0, '水鱼', skin),
+                      _buildModeTab(1, '双平台', skin),
+                      _buildModeTab(2, '落雪', skin),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    _buildModeTab(0, '水鱼', skin),
-                    _buildModeTab(1, '双平台', skin),
-                    _buildModeTab(2, '落雪', skin),
-                  ],
-                ),
-              ),
 
-              // Content Area
-              TransferContentAnimator(
-                duration: UiSizes.defaultAnimationDuration,
-                child: content,
-              ),
-            ],
+                // 2. 内容区
+                TransferContentAnimator(
+                  duration: UiSizes.defaultAnimationDuration,
+                  child: content,
+                ),
+
+                // 3. 日志面板 (始终由其内部 Padding 控制与上方的距离，避免双重间距)
+                SyncLogPanel(
+                  isExpanded: true,
+                  logs: provider.vpnLog,
+                  forceHidden: !provider.isTracking,
+                  onCopy: () {
+                    Clipboard.setData(ClipboardData(text: provider.vpnLog));
+                    context.read<ToastProvider>().show(
+                      "已复制日志",
+                      ToastType.confirmed,
+                    );
+                  },
+                  onClose: () => provider.stopTracking(),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -134,7 +175,7 @@ class _TransferModeCardState extends State<TransferModeCard> {
       key: ValueKey<String>('Success_${widget.gameType}'),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 0, 8),
+          padding: const EdgeInsets.only(bottom: UiSizes.defaultPadding / 2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -164,48 +205,14 @@ class _TransferModeCardState extends State<TransferModeCard> {
           Container(
             height: 1,
             color: const Color(0xFF7B7B7B),
-            margin: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+            margin: const EdgeInsets.only(bottom: UiSizes.defaultPadding),
           ),
-        widget.gameType == 0
-            ? TransferPageMaimaiDx(activeColor: skin.medium)
-            : TransferPageChunithm(activeColor: skin.medium),
-        const SizedBox(height: 16),
-        if (widget.gameType == 0) ...[
-          ConfirmButton(
-            text: provider.isVpnRunning ? "停止捕获" : "开始捕获并上传",
-            onPressed: () {
-              if (provider.isVpnRunning) {
-                provider.stopVpn();
-              } else {
-                provider.startVpn();
-              }
-            },
-          ),
-          if (provider.vpnLog.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              height: 100,
-              width: double.infinity,
-              child: SingleChildScrollView(
-                reverse: true,
-                child: Text(
-                  provider.vpnLog,
-                  style: const TextStyle(
-                    fontFamily: "monospace",
-                    fontSize: 10,
-                    color: Colors.black54,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-        const SizedBox(height: 20),
+        if (widget.gameType == 0)
+          TransferPageMaimaiDx(activeColor: skin.medium)
+        else
+          TransferPageChunithm(activeColor: skin.medium),
+
+        const SizedBox(height: UiSizes.cardInnerPadding),
       ],
     );
   }

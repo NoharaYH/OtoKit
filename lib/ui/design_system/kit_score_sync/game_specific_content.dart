@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/assets.dart';
+import '../constants/sizes.dart';
 import '../kit_shared/confirm_button.dart';
 
 // ============================================================
@@ -95,7 +96,7 @@ class _MaimaiDifficultySelectorState extends State<MaimaiDifficultySelector> {
             );
           },
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: UiSizes.defaultPadding),
         ConfirmButton(
           text: '开始导入',
           state: ConfirmButtonState.ready, // 默认就是 ready，禁用由 onPressedNull 控制
