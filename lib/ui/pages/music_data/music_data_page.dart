@@ -1,11 +1,21 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../application/mai/mai_music_provider.dart';
-import '../../../application/shared/toast_provider.dart';
-import '../../design_system/page_shell.dart';
-import '../../design_system/constants/sizes.dart';
-import '../../design_system/kit_shared/confirm_button.dart';
+
+import '../../../application/shared/game_provider.dart';
+
+import '../../design_system/constants/assets.dart';
+
+import '../../design_system/kit_shared/kit_game_carousel.dart';
+import '../../design_system/kit_shared/game_page_item.dart';
+
+import '../score_sync/components/score_sync_logo_wrapper.dart';
+import '../../design_system/visual_skins/implementations/maimai_dx/circle_background.dart';
+import '../../design_system/visual_skins/implementations/chunithm/verse_background.dart';
+
+import 'components/mai_music_assembly.dart';
+import 'components/chu_music_assembly.dart';
 
 class MusicDataPage extends StatefulWidget {
   const MusicDataPage({super.key});
@@ -15,115 +25,73 @@ class MusicDataPage extends StatefulWidget {
 }
 
 class _MusicDataPageState extends State<MusicDataPage> {
+  late final PageController _localController;
+
   @override
   void initState() {
     super.initState();
-    // 页面加载后检查数据状态
+    final gameProvider = context.read<GameProvider>();
+    // 初始化本地控制器，初始页码同步全局索引
+    _localController = PageController(initialPage: gameProvider.currentIndex);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        gameProvider.pageValueNotifier.value = _localController.initialPage
+            .toDouble();
+      }
+    });
+
+    _localController.addListener(() {
+      if (_localController.hasClients && _localController.page != null) {
+        gameProvider.pageValueNotifier.value = _localController.page!;
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<MaiMusicProvider>();
       await provider.init();
-
-      if (!provider.hasData && mounted) {
-        _showSyncPrompt(context);
-      }
     });
   }
 
-  void _showSyncPrompt(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(UiSizes.cardBorderRadius),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.library_music_outlined,
-                  size: 48,
-                  color: Colors.blueAccent,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  '曲库尚未初始化',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  '当前本地没有曲目数据，为了获得完整的查询体验，请手动执行一次同步拉取。',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54, height: 1.5),
-                ),
-                const SizedBox(height: 24),
-                ConfirmButton(
-                  text: '立即同步',
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    final provider = context.read<MaiMusicProvider>();
-                    final toast = context.read<ToastProvider>();
-
-                    toast.show('正在拉取并精炼数据...', ToastType.verifying);
-                    try {
-                      await provider.sync();
-                      toast.show('同步成功！', ToastType.confirmed);
-                    } catch (e) {
-                      toast.show('同步失败：$e', ToastType.error);
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    '稍后再说',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _localController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return PageShell(
-      child: Consumer<MaiMusicProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading && !provider.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    // 监听全局游戏类型变化，但使用本地控制器渲染
+    final gameProvider = context.read<GameProvider>();
 
-          if (!provider.hasData) {
-            return const Center(child: Text('暂无曲目，请点击同步按钮拉取数据'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(24, 120, 24, 24),
-            itemCount: provider.musics.length,
-            itemBuilder: (context, index) {
-              final music = provider.musics[index];
-              return Card(
-                child: ListTile(
-                  title: Text(music.basicInfo.title),
-                  subtitle: Text(music.basicInfo.artist),
-                ),
-              );
-            },
-          );
-        },
-      ),
+    return KitGameCarousel(
+      controller: _localController,
+      onPageChanged: (index) {
+        // 同步回全局索引，确保切回同步页时状态一致
+        gameProvider.setIndex(index);
+      },
+      items: [
+        GamePageItem(
+          skin: const MaimaiSkin(),
+          title: 'Maimai DX',
+          content: ScoreSyncLogoWrapper(
+            logoPath: AppAssets.logoMaimai,
+            subtitle: 'MUSIC LIBRARY',
+            themeColor: const MaimaiSkin().medium,
+            child: const Expanded(child: MaiMusicAssembly()),
+          ),
+        ),
+        GamePageItem(
+          skin: const ChunithmSkin(),
+          title: 'Chunithm',
+          content: ScoreSyncLogoWrapper(
+            logoPath: AppAssets.logoChunithm,
+            subtitle: 'MUSIC LIBRARY',
+            themeColor: const ChunithmSkin().medium,
+            child: const Expanded(child: ChuMusicAssembly()),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'kernel/di/injection.dart';
-import 'ui/pages/score_sync/score_sync_page.dart';
+import 'ui/pages/root_page.dart';
+import 'application/shared/navigation_provider.dart';
 import 'application/shared/game_provider.dart';
 import 'application/transfer/transfer_provider.dart';
 import 'application/shared/toast_provider.dart';
@@ -17,6 +18,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => GameProvider()),
         ChangeNotifierProvider(create: (_) => getIt<TransferProvider>()),
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
         ChangeNotifierProvider(create: (_) => ToastProvider()),
         ChangeNotifierProvider(create: (_) => MaiMusicProvider()),
         ChangeNotifierProvider(create: (_) => ChuMusicDataProvider()),
@@ -39,7 +41,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const ToastOverlay(child: ScoreSyncPage()),
+      home: const ToastOverlay(child: RootPage()),
     );
   }
 }

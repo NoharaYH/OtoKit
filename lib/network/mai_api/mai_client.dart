@@ -20,7 +20,7 @@ class MaiClient {
     }
     final content = await response.transform(utf8.decoder).join();
     final Map<String, dynamic> data = jsonDecode(content);
-    return data['versions'] ?? [];
+    return data['data'] ?? [];
   }
 
   /// 获取水鱼原始数据
@@ -43,7 +43,7 @@ class MaiClient {
     }
     final content = await response.transform(utf8.decoder).join();
     final Map<String, dynamic> data = jsonDecode(content);
-    return data['songs'] ?? [];
+    return data['data'] ?? [];
   }
 
   void dispose() {

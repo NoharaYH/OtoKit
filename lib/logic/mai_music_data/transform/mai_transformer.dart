@@ -2,14 +2,28 @@ import '../data_formats/mai_music.dart';
 
 class MaiTransformer {
   /// 将水鱼和落雪的原始数据精炼为统一的 MaiMusic 模型列表
-  static List<MaiMusic> transform(List<dynamic> dfRaw, List<dynamic> lxRaw) {
+  static Future<List<MaiMusic>> transform(
+    List<dynamic> dfRaw,
+    List<dynamic> lxRaw, {
+    void Function(int current, int total)? onProgress,
+  }) async {
     final Map<int, dynamic> lxMap = {
       for (var song in lxRaw) song['id'] as int: song,
     };
 
     final List<MaiMusic> refinedList = [];
 
-    for (var dfSong in dfRaw) {
+    final int totalCount = dfRaw.length;
+
+    for (int i = 0; i < totalCount; i++) {
+      final dfSong = dfRaw[i];
+
+      // 每处理 50 首曲目，主动出让一次主线程，防止阻塞 UI 动画渲染
+      if (i % 50 == 0) {
+        await Future.delayed(Duration.zero);
+        onProgress?.call(i, totalCount);
+      }
+
       final int id = int.tryParse(dfSong['id'].toString()) ?? 0;
       final lxSong = lxMap[id];
 
@@ -64,6 +78,10 @@ class MaiTransformer {
         );
       }
     }
+
+    // 最后播报一次 100%
+    onProgress?.call(totalCount, totalCount);
+
     return refinedList;
   }
 

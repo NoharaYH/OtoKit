@@ -64,8 +64,11 @@ class PageShell extends StatelessWidget {
       bottom: 0,
       child: ClipRRect(
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(UiSizes.cardBorderRadius),
-          topRight: Radius.circular(UiSizes.cardBorderRadius),
+          // 悬空包裹向内缩回。由于按钮外边缘距 Glass 有 12pt 的内缩 (Padding)。
+          // 以按钮半径 R=16 为圆心计算同心弧：外侧 Glass 半径必须为 16.0 + 12.0 = 28.0。
+          // 这样保证从右上角看，按钮圆弧刚好与背景玻璃边缘成绝对完美的等距平行。
+          topLeft: Radius.circular(28.0),
+          topRight: Radius.circular(28.0),
         ),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),

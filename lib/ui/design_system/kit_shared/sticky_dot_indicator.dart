@@ -68,7 +68,10 @@ class StickyDotIndicator extends StatelessWidget {
   }
 
   double get _safePage {
-    return controller.hasClients ? (controller.page ?? 0.0) : 0.0;
+    if (controller.hasClients) {
+      return controller.page ?? controller.initialPage.toDouble();
+    }
+    return controller.initialPage.toDouble();
   }
 }
 

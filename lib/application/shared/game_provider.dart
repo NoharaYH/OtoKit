@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class GameProvider extends ChangeNotifier {
   int _currentIndex = 0;
-  final PageController pageController = PageController();
+  final ValueNotifier<double> pageValueNotifier = ValueNotifier<double>(0.0);
 
   int get currentIndex => _currentIndex;
 
@@ -18,18 +18,9 @@ class GameProvider extends ChangeNotifier {
     setIndex(index);
   }
 
-  // Programmatic navigation
-  void animateToPage(int index) {
-    pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
   @override
   void dispose() {
-    pageController.dispose();
+    pageValueNotifier.dispose();
     super.dispose();
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/sizes.dart';
-import '../page_shell.dart';
 import 'game_page_item.dart';
 import 'sticky_dot_indicator.dart';
 
@@ -26,98 +25,63 @@ class KitGameCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PageShell(
-      // 1. 动态背景层 (支持多层级插值)
-      backgroundOverride: AnimatedBuilder(
-        animation: controller,
-        builder: (context, _) => _buildDynamicBackground(context),
-      ),
-      child: Stack(
-        children: [
-          // 2. 分页指示器 (自动感知皮肤变色)
-          Positioned(
-            top: UiSizes.getDotIndicatorTop(context),
-            left: 0,
-            right: 0,
-            child: Center(
-              child: AnimatedBuilder(
-                animation: controller,
-                builder: (context, _) {
-                  final double page = _safePage;
-                  final int index = page.floor();
-                  final double t = (page - index).clamp(0.0, 1.0);
+    return Stack(
+      children: [
+        // 2. 分页指示器 (自动感知皮肤变色)
+        Positioned(
+          top: UiSizes.getDotIndicatorTop(context),
+          left: 0,
+          right: 0,
+          child: Center(
+            child: AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                final double page = _safePage;
+                final int index = page.floor();
+                final double t = (page - index).clamp(0.0, 1.0);
 
-                  // 获取当前页与下一页的皮肤进行插值
-                  final currentSkin =
-                      items[index.clamp(0, items.length - 1)].skin;
-                  final nextSkin =
-                      items[(index + 1).clamp(0, items.length - 1)].skin;
-                  final lerpedSkin = currentSkin.lerp(nextSkin, t);
+                // 获取当前页与下一页的皮肤进行插值
+                final currentSkin =
+                    items[index.clamp(0, items.length - 1)].skin;
+                final nextSkin =
+                    items[(index + 1).clamp(0, items.length - 1)].skin;
+                final lerpedSkin = currentSkin.lerp(nextSkin, t);
 
-                  return Theme(
-                    data: Theme.of(context).copyWith(extensions: [lerpedSkin]),
-                    child: StickyDotIndicator(
-                      controller: controller,
-                      count: items.length,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // 3. 内容层 (具备挤压动效的 PageView)
-          Positioned.fill(
-            child: PageView.builder(
-              controller: controller,
-              onPageChanged: onPageChanged,
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                return AnimatedBuilder(
-                  animation: controller,
-                  builder: (context, _) => _buildParallaxPage(context, index),
+                return Theme(
+                  data: Theme.of(context).copyWith(extensions: [lerpedSkin]),
+                  child: StickyDotIndicator(
+                    controller: controller,
+                    count: items.length,
+                  ),
                 );
               },
             ),
           ),
+        ),
 
-          // 4. 通用页眉操作区
-          if (headerActions != null)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
-              right: 16,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: headerActions!,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+        // 3. 内容层 (具备挤压动效的 PageView)
+        Positioned.fill(
+          child: PageView.builder(
+            controller: controller,
+            onPageChanged: onPageChanged,
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              return AnimatedBuilder(
+                animation: controller,
+                builder: (context, _) => _buildParallaxPage(context, index),
+              );
+            },
+          ),
+        ),
 
-  // --- 动效引擎私有组件 ---
-
-  /// 构建动态渐变背景
-  Widget _buildDynamicBackground(BuildContext context) {
-    final double page = _safePage;
-    final int index = page.floor();
-    final double t = (page - index).clamp(0.0, 1.0);
-
-    final int currentIdx = index.clamp(0, items.length - 1);
-    final int nextIdx = (index + 1).clamp(0, items.length - 1);
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // 底层固定渲染当前页背景
-        items[currentIdx].skin.buildBackground(context),
-        // 顶层通过透明度覆盖下一页背景
-        if (currentIdx != nextIdx)
-          IgnorePointer(
-            child: Opacity(
-              opacity: t,
-              child: items[nextIdx].skin.buildBackground(context),
+        // 4. 通用页眉操作区
+        if (headerActions != null)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            right: 16,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: headerActions!,
             ),
           ),
       ],
@@ -146,13 +110,20 @@ class KitGameCarousel extends StatelessWidget {
           opacity: opacity,
           child: IgnorePointer(
             ignoring: absDiff > 0.5,
-            child: items[index].content,
+            child: Theme(
+              data: Theme.of(context).copyWith(extensions: [items[index].skin]),
+              child: items[index].content,
+            ),
           ),
         ),
       ),
     );
   }
 
-  double get _safePage =>
-      controller.hasClients ? (controller.page ?? 0.0) : 0.0;
+  double get _safePage {
+    if (controller.hasClients) {
+      return controller.page ?? controller.initialPage.toDouble();
+    }
+    return controller.initialPage.toDouble();
+  }
 }

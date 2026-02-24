@@ -9,9 +9,15 @@ class MaiMusicProvider extends ChangeNotifier {
 
   bool _isInitialized = false;
   bool _isLoading = false;
+  SyncPhase _syncPhase = SyncPhase.idle;
+  int _syncCurrent = 0;
+  int _syncTotal = 0;
 
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
+  SyncPhase get syncPhase => _syncPhase;
+  int get syncCurrent => _syncCurrent;
+  int get syncTotal => _syncTotal;
   bool get hasData => _library.musics.isNotEmpty;
   List<MaiMusic> get musics => _library.musics;
 
@@ -35,12 +41,26 @@ class MaiMusicProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final newSongs = await _syncHandler.performSync(force: true);
+      final newSongs = await _syncHandler.performSync(
+        force: true,
+        onPhaseChanged: (phase) {
+          _syncPhase = phase;
+          notifyListeners();
+        },
+        onProgress: (current, total) {
+          _syncCurrent = current;
+          _syncTotal = total;
+          notifyListeners();
+        },
+      );
       if (newSongs != null) {
         await _library.updateAndPersist(newSongs);
       }
     } finally {
       _isLoading = false;
+      _syncPhase = SyncPhase.idle;
+      _syncCurrent = 0;
+      _syncTotal = 0;
       notifyListeners();
     }
   }

@@ -13,18 +13,48 @@ import 'components/chu_sync_page.dart';
 import '../../design_system/visual_skins/implementations/maimai_dx/circle_background.dart';
 import '../../design_system/visual_skins/implementations/chunithm/verse_background.dart';
 
-import '../settings/settings_page.dart';
-import '../music_data/music_data_page.dart';
-
-class ScoreSyncPage extends StatelessWidget {
+class ScoreSyncPage extends StatefulWidget {
   const ScoreSyncPage({super.key});
 
   @override
+  State<ScoreSyncPage> createState() => _ScoreSyncPageState();
+}
+
+class _ScoreSyncPageState extends State<ScoreSyncPage> {
+  late final PageController _localController;
+
+  @override
+  void initState() {
+    super.initState();
+    final gameProvider = context.read<GameProvider>();
+    _localController = PageController(initialPage: gameProvider.currentIndex);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        gameProvider.pageValueNotifier.value = _localController.initialPage
+            .toDouble();
+      }
+    });
+
+    _localController.addListener(() {
+      if (_localController.hasClients && _localController.page != null) {
+        gameProvider.pageValueNotifier.value = _localController.page!;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _localController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final gameProvider = context.watch<GameProvider>();
+    final gameProvider = context.read<GameProvider>();
 
     return KitGameCarousel(
-      controller: gameProvider.pageController,
+      controller: _localController,
       onPageChanged: gameProvider.onPageChanged,
       items: [
         const GamePageItem(
@@ -36,22 +66,6 @@ class ScoreSyncPage extends StatelessWidget {
           skin: ChunithmSkin(),
           content: ChuSyncPage(),
           title: 'Chunithm',
-        ),
-      ],
-      headerActions: [
-        IconButton(
-          icon: const Icon(Icons.library_music, color: Colors.black87),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MusicDataPage()),
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.settings, color: Colors.black87),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SettingsPage()),
-          ),
         ),
       ],
     );

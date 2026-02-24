@@ -4,15 +4,22 @@ import '../data_formats/mai_music.dart';
 import '../../../kernel/services/storage_service.dart';
 import '../../../kernel/di/injection.dart';
 
+enum SyncPhase { idle, pulling, merging }
+
 class MaiSyncHandler {
   static const String kMaiDataFingerprint = 'mai_data_fingerprint';
   bool _isSyncing = false;
   bool get isSyncing => _isSyncing;
 
   /// 核心同步任务：包含指纹校验守门员逻辑
-  Future<List<MaiMusic>?> performSync({bool force = false}) async {
+  Future<List<MaiMusic>?> performSync({
+    bool force = false,
+    void Function(SyncPhase)? onPhaseChanged,
+    void Function(int current, int total)? onProgress,
+  }) async {
     if (_isSyncing) return null;
     _isSyncing = true;
+    onPhaseChanged?.call(SyncPhase.pulling);
 
     final client = MaiClient();
     final storage = getIt<StorageService>();
@@ -41,7 +48,12 @@ class MaiSyncHandler {
       ]);
 
       // 4. 使用 Transformer 进行变形转换
-      final refined = MaiTransformer.transform(results[0], results[1]);
+      onPhaseChanged?.call(SyncPhase.merging);
+      final refined = await MaiTransformer.transform(
+        results[0],
+        results[1],
+        onProgress: onProgress,
+      );
 
       // 5. 同步成功后，更新本地指纹
       await storage.save(kMaiDataFingerprint, latestFingerprint);
