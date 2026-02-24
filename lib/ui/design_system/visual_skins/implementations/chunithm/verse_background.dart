@@ -4,7 +4,7 @@ import '../../../constants/assets.dart';
 
 /// 中二节奏 - Verse Town 主题皮肤
 class ChunithmSkin extends SkinExtension {
-  ChunithmSkin();
+  const ChunithmSkin();
 
   // ==================== 主题色定义 ====================
 

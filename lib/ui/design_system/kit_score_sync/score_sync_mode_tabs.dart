@@ -1,0 +1,85 @@
+import 'package:flutter/material.dart';
+import '../visual_skins/skin_extension.dart';
+import '../constants/sizes.dart';
+
+class ScoreSyncModeTabs extends StatelessWidget {
+  final int mode; // 0: Diving Fish, 1: Both, 2: LXNS
+  final ValueChanged<int> onModeChanged;
+
+  const ScoreSyncModeTabs({
+    super.key,
+    required this.mode,
+    required this.onModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final skin = Theme.of(context).extension<SkinExtension>();
+    final Color activeColor = skin?.dark ?? Colors.pink;
+
+    return Container(
+      height: 46,
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: UiSizes.atomicComponentGap),
+      padding: const EdgeInsets.all(UiSizes.spaceXXS),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(UiSizes.buttonBorderRadius),
+      ),
+      child: Row(
+        children: [
+          _buildTab(0, '水鱼', activeColor),
+          _buildTab(1, '双平台', activeColor),
+          _buildTab(2, '落雪', activeColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTab(int index, String text, Color activeColor) {
+    final isSelected = mode == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onModeChanged(index),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AnimatedContainer(
+                duration: UiSizes.shortAnimationDuration,
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(
+                    UiSizes.buttonBorderRadius - 2,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+              ),
+              Center(
+                child: AnimatedDefaultTextStyle(
+                  duration: UiSizes.shortAnimationDuration,
+                  style: TextStyle(
+                    color: isSelected ? activeColor : Colors.black54,
+                    fontFamily: 'JiangCheng',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  child: Text(text),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

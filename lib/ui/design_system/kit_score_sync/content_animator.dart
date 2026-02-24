@@ -50,8 +50,9 @@ class _TransferContentAnimatorState extends State<TransferContentAnimator>
       _triggerTransition(widget.child);
     } else {
       // FIX: If key is the same (e.g. loading state changed), update content immediately
-      // This ensures visual updates within the same page are not ignored.
-      _currentChild = widget.child;
+      setState(() {
+        _currentChild = widget.child;
+      });
     }
   }
 
@@ -69,9 +70,9 @@ class _TransferContentAnimatorState extends State<TransferContentAnimator>
     // Check if this operation is still the latest one
     if (!mounted || opId != _currentOperationId) return;
 
-    // 2. CHANGE CHILD
+    // 2. CHANGE CHILD (use the snapshot captured at call time, not widget.child)
     setState(() {
-      _currentChild = widget.child;
+      _currentChild = nextChild;
     });
 
     // 3. WAIT FOR RESIZE
@@ -101,12 +102,7 @@ class _TransferContentAnimatorState extends State<TransferContentAnimator>
         opacity: _opacityAnimation,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: UiSizes.cardInnerPadding,
-          ),
-          // We wrap _currentChild to ensure layout constraints are passed down
-          // Key is crucial for framework to differentiate widgets if needed,
-          // but here we rely on _currentChild's internal key.
+          padding: EdgeInsets.zero,
           child: _currentChild,
         ),
       ),

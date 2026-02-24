@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 /// 皮肤扩展接口
 /// 每个具体的皮肤实现此接口，提供主题色和渲染逻辑
 abstract class SkinExtension extends ThemeExtension<SkinExtension> {
+  const SkinExtension();
+
   /// 亮色调 - 用于背景渐变、玻璃效果叠加层
   Color get light;
 

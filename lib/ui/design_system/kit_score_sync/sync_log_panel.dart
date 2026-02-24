@@ -110,10 +110,10 @@ class _SyncLogPanelState extends State<SyncLogPanel> {
           ? const SizedBox(width: double.infinity, height: 0)
           : Padding(
               padding: const EdgeInsets.fromLTRB(
-                UiSizes.cardInnerPadding,
-                UiSizes.cardInnerPadding, // 恢复标准间距 16px
-                UiSizes.cardInnerPadding,
-                UiSizes.defaultPadding,
+                0,
+                UiSizes.atomicComponentGap,
+                0,
+                0,
               ),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 600),

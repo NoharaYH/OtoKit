@@ -7,22 +7,21 @@ import '../kit_shared/confirm_button.dart';
 // ============== 舞萌专属：难度选择器 =========================
 // ============================================================
 
-class MaimaiDifficultySelector extends StatefulWidget {
+class MaiDifChoice extends StatefulWidget {
   final Color activeColor;
   final VoidCallback onImport;
 
-  const MaimaiDifficultySelector({
+  const MaiDifChoice({
     super.key,
     required this.activeColor,
     required this.onImport,
   });
 
   @override
-  State<MaimaiDifficultySelector> createState() =>
-      _MaimaiDifficultySelectorState();
+  State<MaiDifChoice> createState() => _MaiDifChoiceState();
 }
 
-class _MaimaiDifficultySelectorState extends State<MaimaiDifficultySelector> {
+class _MaiDifChoiceState extends State<MaiDifChoice> {
   // 0: Basic, 1: Advanced, 2: Expert, 3: Master, 4: Re:Master, 5: Utage
   final Set<int> _selectedDifficulties = {0, 1, 2, 3, 4, 5};
 
@@ -236,9 +235,11 @@ class _DifficultyButtonState extends State<_DifficultyButton>
                 child: Container(
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(
+                      UiSizes.buttonBorderRadius,
+                    ),
                   ),
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(UiSizes.spaceXXS),
                   alignment: Alignment.center,
                   child: SizedBox(
                     height: 34,
@@ -262,23 +263,21 @@ class _DifficultyButtonState extends State<_DifficultyButton>
 // ============== 中二专属：难度选择器（待开发）================
 // ============================================================
 
-class ChunithmDifficultySelector extends StatefulWidget {
+class ChuDifChoice extends StatefulWidget {
   final Color activeColor;
   final VoidCallback onImport;
 
-  const ChunithmDifficultySelector({
+  const ChuDifChoice({
     super.key,
     required this.activeColor,
     required this.onImport,
   });
 
   @override
-  State<ChunithmDifficultySelector> createState() =>
-      _ChunithmDifficultySelectorState();
+  State<ChuDifChoice> createState() => _ChuDifChoiceState();
 }
 
-class _ChunithmDifficultySelectorState
-    extends State<ChunithmDifficultySelector> {
+class _ChuDifChoiceState extends State<ChuDifChoice> {
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -286,7 +285,7 @@ class _ChunithmDifficultySelectorState
       children: [
         const Center(
           child: Padding(
-            padding: EdgeInsets.all(32.0),
+            padding: const EdgeInsets.all(UiSizes.spaceXL),
             child: Text(
               '中二难度选择器（待开发）',
               style: TextStyle(fontSize: 16, color: Colors.grey),

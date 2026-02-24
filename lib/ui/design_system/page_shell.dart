@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'constants/sizes.dart';
 import 'visual_skins/skin_extension.dart';
 
 /// 页面外壳
@@ -10,42 +11,66 @@ import 'visual_skins/skin_extension.dart';
 class PageShell extends StatelessWidget {
   final Widget child;
 
-  const PageShell({super.key, required this.child});
+  /// Optional override for the background layer.
+  /// If provided, this widget will be used instead of the current theme's skin background.
+  /// This is useful for HomePage's cross-fading background.
+  final Widget? backgroundOverride;
+
+  /// Whether to show the glass-morphism overlay card.
+  /// Defaults to true.
+  final bool showGlassOverlay;
+
+  const PageShell({
+    super.key,
+    required this.child,
+    this.backgroundOverride,
+    this.showGlassOverlay = true,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // 获取当前皮肤
+    // 1. Get current skin from ThemeExtension
     final skin = Theme.of(context).extension<SkinExtension>();
+
+    // 2. Resolve background: Override > Skin Background > Fallback
+    final Widget background =
+        backgroundOverride ??
+        (skin != null
+            ? skin.buildBackground(context)
+            : Container(color: Colors.white)); // Fallback if no skin
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // 1. 背景层（从皮肤系统取）
-          if (skin != null)
-            Positioned.fill(child: skin.buildBackground(context)),
+          // BOTTOM: The unique background layer
+          Positioned.fill(child: background),
 
-          // 2. 毛玻璃底板（硬编码，不可隐藏）
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.05,
-            left: MediaQuery.of(context).size.width * 0.05,
-            right: MediaQuery.of(context).size.width * 0.05,
-            bottom: 0,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                child: Container(color: Colors.white.withValues(alpha: 0.8)),
-              ),
-            ),
-          ),
+          // MIDDLE: The unique glass overlay layer
+          if (showGlassOverlay) _buildGlassOverlay(context),
 
-          // 3. 内容区
+          // TOP: Content layer
           Positioned.fill(child: child),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGlassOverlay(BuildContext context) {
+    return Positioned(
+      top: UiSizes.getTopMarginWithSafeArea(context),
+      left: UiSizes.getHorizontalMargin(context),
+      right: UiSizes.getHorizontalMargin(context),
+      bottom: 0,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(UiSizes.cardBorderRadius),
+          topRight: Radius.circular(UiSizes.cardBorderRadius),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          child: Container(color: Colors.white.withValues(alpha: 0.8)),
+        ),
       ),
     );
   }

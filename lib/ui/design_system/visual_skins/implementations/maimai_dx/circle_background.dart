@@ -4,7 +4,7 @@ import '../../../constants/assets.dart';
 
 /// 舞萌 DX - Circle 主题皮肤
 class MaimaiSkin extends SkinExtension {
-  MaimaiSkin();
+  const MaimaiSkin();
 
   // ==================== 主题色定义 ====================
 

@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import '../visual_skins/skin_extension.dart';
 
 class StickyDotIndicator extends StatelessWidget {
   final PageController controller;
   final int count;
-  final Color activeColor;
-  final Color inactiveColor;
 
   const StickyDotIndicator({
     super.key,
     required this.controller,
     required this.count,
-    required this.activeColor,
-    this.inactiveColor = Colors.grey, // Default inactive color
   });
 
   @override
   Widget build(BuildContext context) {
+    final skin = Theme.of(context).extension<SkinExtension>();
+    final Color activeColor = skin?.medium ?? Colors.pink;
+    final Color inactiveColor = activeColor.withValues(alpha: 0.3);
+
     const double dotSize = 8.0;
     const double spacing = 16.0;
     final double totalWidth = (count * dotSize) + ((count - 1) * spacing);

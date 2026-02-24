@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'kernel/di/injection.dart';
-import 'ui/pages/home/home_page.dart';
+import 'ui/pages/score_sync/score_sync_page.dart';
 import 'kernel/state/game_provider.dart';
 import 'kernel/state/transfer_provider.dart';
 import 'kernel/state/toast_provider.dart';
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const ToastOverlay(child: HomePage()),
+      home: const ToastOverlay(child: ScoreSyncPage()),
     );
   }
 }
