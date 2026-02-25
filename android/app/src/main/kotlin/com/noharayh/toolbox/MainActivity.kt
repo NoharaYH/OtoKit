@@ -8,11 +8,15 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.noharayh.toolbox.vpn.core.LocalVpnService
 import com.noharayh.toolbox.crawler.CrawlerCaller
+import com.noharayh.toolbox.crawler.WechatCrawlerListener
 import com.noharayh.toolbox.DataContext
 import com.noharayh.toolbox.server.HttpServerService
 import android.util.Log
 
-class MainActivity : FlutterActivity(), LocalVpnService.onStatusChangedListener {
+class MainActivity : FlutterActivity(),
+    LocalVpnService.onStatusChangedListener,
+    WechatCrawlerListener {
+
     private val CHANNEL = "com.nohara.otogamer/vpn"
     private var methodChannel: MethodChannel? = null
 
@@ -31,16 +35,12 @@ class MainActivity : FlutterActivity(), LocalVpnService.onStatusChangedListener 
                     }
                 }
                 "startVpn" -> {
-                    // Set credentials from Flutter
                     DataContext.Username = call.argument<String>("username")
                     DataContext.Password = call.argument<String>("password")
-                    
-                    // Difficulty settings (Map from list/map if needed)
-                    // For now assume all enabled or pass individually
                     DataContext.ExpertEnabled = true
                     DataContext.MasterEnabled = true
                     DataContext.RemasterEnabled = true
-                    
+
                     startService(Intent(this, LocalVpnService::class.java))
                     startService(Intent(this, HttpServerService::class.java))
                     result.success(null)
@@ -53,10 +53,11 @@ class MainActivity : FlutterActivity(), LocalVpnService.onStatusChangedListener 
                 else -> result.notImplemented()
             }
         }
-        
-        // Register as listener
+
+        // 注册 VPN 状态监听
         LocalVpnService.addOnStatusChangedListener(this)
-        CrawlerCaller.listener = this
+        // 注册 Crawler 日志监听（MD 接口）
+        CrawlerCaller.setOnWechatCrawlerListener(this)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -65,6 +66,8 @@ class MainActivity : FlutterActivity(), LocalVpnService.onStatusChangedListener 
             methodChannel?.invokeMethod("onVpnPrepared", true)
         }
     }
+
+    // --- LocalVpnService.onStatusChangedListener ---
 
     override fun onStatusChanged(status: String?, isRunning: Boolean) {
         runOnUiThread {
@@ -82,13 +85,42 @@ class MainActivity : FlutterActivity(), LocalVpnService.onStatusChangedListener 
     }
 
     override fun onAuthUrlReceived(authUrl: String?) {
+        // 已由 CrawlerCaller 在原生侧闭环处理，此回调保留但不向 Flutter 透传
+    }
+
+    // --- WechatCrawlerListener ---
+
+    override fun onMessageReceived(message: String) {
         runOnUiThread {
-            methodChannel?.invokeMethod("onAuthUrlReceived", authUrl)
+            methodChannel?.invokeMethod("onLogReceived", message)
+        }
+    }
+
+    override fun onStartAuth() {
+        runOnUiThread {
+            methodChannel?.invokeMethod("onLogReceived", "[AUTH] 正在进行微信授权...")
+        }
+    }
+
+    override fun onFinishUpdate() {
+        runOnUiThread {
+            methodChannel?.invokeMethod("onLogReceived", "[DONE] 传分完成")
+            methodChannel?.invokeMethod("onStatusChanged", mapOf(
+                "status" to "传分完成",
+                "isRunning" to false
+            ))
+        }
+    }
+
+    override fun onError(e: Exception) {
+        runOnUiThread {
+            methodChannel?.invokeMethod("onLogReceived", "[ERROR] ${e.message}")
         }
     }
 
     override fun onDestroy() {
         LocalVpnService.removeOnStatusChangedListener(this)
+        CrawlerCaller.removeOnWechatCrawlerListener()
         super.onDestroy()
     }
 }

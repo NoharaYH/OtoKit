@@ -4,26 +4,30 @@ import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import '../../kernel/services/storage_service.dart';
 import '../../kernel/services/api_service.dart';
-import '../../score_sync/wechat_crawler.dart';
 
+/// TransferProvider：纯 UI 状态中转层。
+///
+/// 传分的核心业务逻辑（WechatCrawler、Cookie管理、数据抓取）
+/// 已全量迁移至 Android 原生侧（CrawlerCaller.java + WechatCrawler.java）。
+/// 本类职责仅为：
+///   1. 管理用户输入 (Token 表单)
+///   2. 通过 MethodChannel 向原生层下发指令
+///   3. 接收原生层推送的日志流并提供给 UI 消费
 @injectable
 class TransferProvider extends ChangeNotifier {
   final ApiService _apiService;
   final StorageService _storageService;
 
-  late final WechatCrawler _crawler;
-
-  // Controllers for input fields
+  // 用户输入控制器
   final TextEditingController dfController = TextEditingController();
   final TextEditingController lxnsController = TextEditingController();
 
-  // Observable State
+  // UI 状态
   bool _isLoading = false;
   bool _isStorageLoaded = false;
   bool _isDivingFishVerified = false;
   bool _isLxnsVerified = false;
   bool _isVpnRunning = false;
-  Set<int> _selectedDifficulties = {0, 1, 2, 3, 4, 5};
   bool _isTracking = false;
   int? _trackingGameType;
   String? _errorMessage;
@@ -47,17 +51,13 @@ class TransferProvider extends ChangeNotifier {
   Timer? _logNotifyTimer;
 
   TransferProvider(this._apiService, this._storageService) {
-    _crawler = WechatCrawler(
-      onLog: (msg) => _handleLog(msg),
-      onError: (err) => _handleLog("[ERROR] $err"),
-    );
     _loadTokens();
     _initChannel();
   }
 
   void _handleLog(String msg) {
     _vpnLog += "$msg\n";
-    // Debounce notifyListeners to avoid ANR during high-frequency logging
+    // 防抖：高频日志期间避免频繁触发 UI 重建
     if (_logNotifyTimer?.isActive ?? false) return;
     _logNotifyTimer = Timer(const Duration(milliseconds: 100), () {
       notifyListeners();
@@ -74,25 +74,7 @@ class TransferProvider extends ChangeNotifier {
           notifyListeners();
           break;
         case 'onLogReceived':
-          _vpnLog += "${call.arguments}\n";
-          notifyListeners();
-          break;
-        case 'onAuthUrlReceived':
-          final url = call.arguments as String;
-          _vpnLog += "[SYSTEM] 授权链接已捕获，正在后台启动传分任务...\n";
-          notifyListeners();
-
-          _crawler
-              .executeSync(
-                username: dfController.text.trim(),
-                password: "",
-                difficulties: _selectedDifficulties,
-                wechatAuthUrl: url,
-              )
-              .whenComplete(() {
-                _vpnLog += "[SYSTEM] 传分全流程结束，已断开代理。您可以手动关闭日志面板。\n";
-                stopVpn(resetState: false);
-              });
+          _handleLog(call.arguments as String);
           break;
         case 'onVpnPrepared':
           if (call.arguments == true) {
@@ -106,6 +88,7 @@ class TransferProvider extends ChangeNotifier {
   Future<void> startVpn() async {
     final ok = await _channel.invokeMethod<bool>('prepareVpn');
     if (ok == true) {
+      // 将 Token 凭证与难度配置一同下发，供原生 DataContext 存储后使用
       await _channel.invokeMethod('startVpn', {
         'username': dfController.text,
         'password': lxnsController.text,
@@ -141,14 +124,13 @@ class TransferProvider extends ChangeNotifier {
   }) async {
     _isTracking = true;
     _trackingGameType = gameType;
-    _selectedDifficulties = difficulties;
     _vpnLog = "[SYSTEM] 正在启动本地代理环境...\n";
     notifyListeners();
 
     try {
       await startVpn();
 
-      // Use local proxy URL with random path to bypass WeChat cache
+      // 使用随机 Path 防止微信浏览器缓存上一次的重定向
       final randomStr = DateTime.now().millisecondsSinceEpoch
           .toRadixString(36)
           .substring(0, 8);
@@ -167,6 +149,7 @@ class TransferProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _logNotifyTimer?.cancel();
     dfController.dispose();
     lxnsController.dispose();
     super.dispose();

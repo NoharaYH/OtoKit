@@ -1,11 +1,8 @@
 package com.noharayh.toolbox.server;
 
-import static com.noharayh.toolbox.DataContext.HookHost;
-
 import android.util.Log;
 
 import com.noharayh.toolbox.crawler.CrawlerCaller;
-import com.noharayh.toolbox.crawler.WechatCrawler;
 
 import java.io.IOException;
 
@@ -40,12 +37,12 @@ public class HttpServer extends NanoHTTPD {
     // To avoid fu***ing cache of wechat webview client
     private Response redirectToAuthUrlWithRandomParm(IHTTPSession session) {
         Response r = newFixedLengthResponse(Response.Status.REDIRECT, MIME_HTML, "");
-        r.addHeader("Location", "http://" + HookHost + "/auth?random=" + System.currentTimeMillis());
+        r.addHeader("Location", "http://127.0.0.1:8284/auth?random=" + System.currentTimeMillis());
         return r;
     }
 
     private Response redirectToWechatAuthUrl(IHTTPSession session) {
-        String url = CrawlerCaller.getWechatAuthUrl();
+        String url = CrawlerCaller.INSTANCE.getWechatAuthUrl();
         if (url == null)
             return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_HTML, "");
         Log.d(TAG, url);

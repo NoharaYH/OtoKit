@@ -1,10 +1,12 @@
 package com.noharayh.toolbox.crawler;
 
+
+import static com.noharayh.toolbox.crawler.CrawlerCaller.finishUpdate;
+import static com.noharayh.toolbox.crawler.CrawlerCaller.onError;
+import static com.noharayh.toolbox.crawler.CrawlerCaller.startAuth;
 import static com.noharayh.toolbox.crawler.CrawlerCaller.writeLog;
 
 import android.util.Log;
-
-import com.noharayh.toolbox.notification.NotificationUtil;
 
 import java.io.IOException;
 import java.security.cert.CertificateException;
@@ -17,8 +19,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -29,6 +29,7 @@ import javax.net.ssl.X509TrustManager;
 
 import okhttp3.Call;
 import okhttp3.ConnectionSpec;
+import okhttp3.Headers;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -44,6 +45,12 @@ public class WechatCrawler {
     private static final int MAX_RETRY_COUNT = 4;
 
     private static final String TAG = "Crawler";
+
+    private static final String WX_WINDOWS_UA =
+            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+                    "Chrome/81.0.4044.138 Safari/537.36 NetType/WIFI " +
+                    "MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x6307001e)";
+
 
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
@@ -72,9 +79,8 @@ public class WechatCrawler {
         try {
             Response response = call.execute();
             String result = response.body().string();
-            writeLog(diffMap.get(diff) + " 难度数据上传完成：" + result);
-        }
-        catch (Exception e) {
+            writeLog(diffMap.get(diff) + " 难度数据上传状态：" + result);
+        } catch (Exception e) {
             retryUploadData(e, diff, data, retryCount);
         }
     }
@@ -82,24 +88,22 @@ public class WechatCrawler {
     private static void retryUploadData(Exception e, Integer diff, String data, Integer currentRetryCount) {
         writeLog("上传 " + diffMap.get(diff) + " 分数数据至水鱼查分器时出现错误: " + e);
         if (currentRetryCount < MAX_RETRY_COUNT) {
-            writeLog("进行第" + currentRetryCount.toString() + "次重试");
+            writeLog("进行第" + currentRetryCount + "次重试");
             uploadData(diff, data, currentRetryCount + 1);
-        }
-        else {
+        } else {
             writeLog(diffMap.get(diff) + "难度数据上传失败！");
         }
     }
 
     private static void fetchAndUploadData(String username, String password, Set<Integer> difficulties) {
-        List<CompletableFuture<Object>> tasks = new ArrayList<>();
         for (Integer diff : difficulties) {
-            tasks.add(CompletableFuture.supplyAsync(() -> {
-                fetchAndUploadData(username, password, diff, 1);
-                return null;
-            }));
-        }
-        for (CompletableFuture<Object> task: tasks) {
-            task.join();
+            fetchAndUploadData(username, password, diff, 1);
+            // 每次请求后稍微等待，避免触发华立服务器的反爬/并发拦截（567错误）
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // ignore
+            }
         }
     }
 
@@ -111,10 +115,6 @@ public class WechatCrawler {
         try {
             Response response = call.execute();
             String data = Objects.requireNonNull(response.body()).string();
-            Matcher matcher = Pattern.compile("<html.*>([\\s\\S]*)</html>").matcher(data);
-            if (matcher.find()) data = Objects.requireNonNull(matcher.group(1));
-            data = Pattern.compile("\\s+").matcher(data).replaceAll(" ");
-
             // Upload data to maimai-prober
             writeLog(diffMap.get(diff) + " 难度的数据已获取，正在上传至水鱼查分器");
             uploadData(diff, "<login><u>" + username + "</u><p>" + password + "</p></login>" + data, 1);
@@ -126,26 +126,11 @@ public class WechatCrawler {
     private static void retryFetchAndUploadData(Exception e, String username, String password, Integer diff, Integer currentRetryCount) {
         writeLog("获取 " + diffMap.get(diff) + " 难度数据时出现错误: " + e);
         if (currentRetryCount < MAX_RETRY_COUNT) {
-            writeLog("进行第" + currentRetryCount.toString() + "次重试");
+            writeLog("进行第" + currentRetryCount + "次重试");
             fetchAndUploadData(username, password, diff, currentRetryCount + 1);
-        }
-        else {
+        } else {
             writeLog(diffMap.get(diff) + "难度数据更新失败！");
         }
-    }
-
-    public boolean verifyProberAccount(String username, String password) throws IOException {
-        String data = String.format("{\"username\" : \"%s\", \"password\" : \"%s\"}", username, password);
-        RequestBody body = RequestBody.create(JSON, data);
-
-        Request request = new Request.Builder().addHeader("Host", "www.diving-fish.com").addHeader("Origin", "https://www.diving-fish.com").addHeader("Referer", "https://www.diving-fish.com/maimaidx/prober/").url("https://www.diving-fish.com/api/maimaidxprober/login").post(body).build();
-
-        Call call = client.newCall(request);
-        Response response = call.execute();
-        String responseBody = response.body().string();
-
-        Log.d(TAG, "Verify account: " + responseBody + response);
-        return !responseBody.contains("errcode");
     }
 
     protected String getWechatAuthUrl() throws IOException {
@@ -169,12 +154,13 @@ public class WechatCrawler {
 
         // Login wechat
         try {
+            startAuth();
             writeLog("开始登录net，请稍后...");
             this.loginWechat(wechatAuthUrl);
             writeLog("登陆完成");
         } catch (Exception error) {
             writeLog("登陆时出现错误:\n");
-            writeLog(error);
+            onError(error);
             return;
         }
 
@@ -182,38 +168,41 @@ public class WechatCrawler {
         try {
             this.fetchMaimaiData(username, password, difficulties);
             writeLog("maimai 数据更新完成");
+            finishUpdate();
         } catch (Exception error) {
             writeLog("maimai 数据更新时出现错误:");
-            writeLog(error);
-            return;
-        }
-
-        // TODO: Fetch chuithm data
-        // this.fetchChunithmData(username, password);
-        NotificationUtil.getINSTANCE().stopNotification();
-    }
-
-    protected String getLatestVersion() {
-        this.buildHttpClient(true);
-
-        Request request = new Request.Builder().get().url("https://maimaidx-prober-updater-android.bakapiano.com/version").build();
-
-        Call call = client.newCall(request);
-        try {
-            Response response = call.execute();
-            return response.body().string().trim();
-        }
-        catch (IOException e) {
-            return null;
+            onError(error);
         }
     }
+
 
     private void loginWechat(String wechatAuthUrl) throws Exception {
         this.buildHttpClient(true);
 
         Log.d(TAG, wechatAuthUrl);
 
-        Request request = new Request.Builder().addHeader("Host", "tgk-wcaime.wahlap.com").addHeader("Upgrade-Insecure-Requests", "1").addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 12; IN2010 Build/RKQ1.211119.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/4317 MMWEBSDK/20220903 Mobile Safari/537.36 MMWEBID/363 MicroMessenger/8.0.28.2240(0x28001C57) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64").addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/wxpic,image/tpg,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9").addHeader("X-Requested-With", "com.tencent.mm").addHeader("Sec-Fetch-Site", "none").addHeader("Sec-Fetch-Mode", "navigate").addHeader("Sec-Fetch-User", "?1").addHeader("Sec-Fetch-Dest", "document").addHeader("Accept-Encoding", "gzip, deflate").addHeader("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7").get().url(wechatAuthUrl).build();
+        Headers headers = new Headers.Builder()
+                .add("Connection", "keep-alive")
+                .add("Upgrade-Insecure-Requests", "1")
+                .add("User-Agent", WX_WINDOWS_UA)
+                .add(
+                        "Accept",
+                        "text/html,application/xhtml+xml,application/xml;q=0.9," +
+                                "image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+                )
+                .add("Sec-Fetch-Site", "none")
+                .add("Sec-Fetch-Mode", "navigate")
+                .add("Sec-Fetch-User", "?1")
+                .add("Sec-Fetch-Dest", "document")
+                .add("Accept-Encoding", "gzip, deflate, br")
+                .add("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")
+                .build();
+
+        Request request = new Request.Builder()
+                .headers(headers)
+                .get()
+                .url(wechatAuthUrl)
+                .build();
 
         Call call = client.newCall(request);
         Response response = call.execute();
@@ -222,13 +211,15 @@ public class WechatCrawler {
             String responseBody = response.body().string();
             Log.d(TAG, responseBody);
         } catch (NullPointerException error) {
-            writeLog(error);
+            onError(error);
         }
 
         int code = response.code();
         writeLog(String.valueOf(code));
         if (code >= 400) {
-            throw new Exception("登陆时出现错误，请重试！");
+            Exception exception = new Exception("登陆时出现错误，请重试！");
+            onError(exception);
+            throw new Exception(exception);
         }
 
         // Handle redirect manually
@@ -245,10 +236,6 @@ public class WechatCrawler {
         fetchAndUploadData(username, password, difficulties);
     }
 
-    private void fetchChunithmData(String username, String password) throws IOException {
-        // TODO
-    }
-
     private void buildHttpClient(boolean followRedirect) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
 
@@ -257,7 +244,6 @@ public class WechatCrawler {
         builder.connectTimeout(120, TimeUnit.SECONDS);
         builder.readTimeout(120, TimeUnit.SECONDS);
         builder.writeTimeout(120, TimeUnit.SECONDS);
-
         builder.followRedirects(followRedirect);
         builder.followSslRedirects(followRedirect);
 
