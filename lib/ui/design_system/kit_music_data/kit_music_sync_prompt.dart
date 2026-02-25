@@ -117,9 +117,9 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
           borderRadius: BorderRadius.circular(UiSizes.cardBorderRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
