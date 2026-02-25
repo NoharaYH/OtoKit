@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/sizes.dart';
-import '../kit_shared/kit_bounce_scaler.dart';
 import '../kit_shared/kit_animation_engine.dart';
+import '../kit_shared/kit_bounce_scaler.dart';
+import '../kit_shared/confirmation_box.dart';
 
 class ScoreSyncTokenField extends StatefulWidget {
   final TextEditingController controller;
@@ -183,7 +184,33 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
                 horizontal: UiSizes.cardContentPadding,
               ),
               child: _currentClipboard != null
-                  ? _buildPasteConfirmBoxContent(_currentClipboard!)
+                  ? ConfirmationBox(
+                      label: const Text(
+                        '是否要粘贴以下内容？',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      body: Text(
+                        _showToken
+                            ? _currentClipboard!
+                            : '•' * _currentClipboard!.length.clamp(0, 20),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                        maxLines: 1,
+                        overflow: _showToken
+                            ? TextOverflow.ellipsis
+                            : TextOverflow.clip,
+                      ),
+                      onConfirm: () {
+                        final textToPaste = _currentClipboard!;
+                        _hidePasteBox();
+                        widget.controller.text = textToPaste;
+                        widget.onPasteConfirmed?.call(textToPaste);
+                      },
+                      onCancel: _hidePasteBox,
+                    )
                   : const SizedBox.shrink(),
             ),
           ),
@@ -199,75 +226,5 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
       if (!mounted) return;
       _showPasteBox(text);
     }
-  }
-
-  Widget _buildPasteConfirmBoxContent(String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          flex: 3,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '是否要粘贴以下内容？',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-              const SizedBox(height: UiSizes.spaceXXS),
-              Text(
-                _showToken ? text : '•' * text.length.clamp(0, 20),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-                maxLines: 1,
-                overflow: _showToken
-                    ? TextOverflow.ellipsis
-                    : TextOverflow.clip,
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          flex: 1,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              KitBounceScaler(
-                onTap: () {
-                  final textToPaste = _currentClipboard!;
-                  _hidePasteBox();
-                  widget.controller.text = textToPaste;
-                  widget.onPasteConfirmed?.call(textToPaste);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(UiSizes.spaceXXS),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check, color: Colors.green, size: 16),
-                ),
-              ),
-              const SizedBox(width: UiSizes.spaceXS),
-              KitBounceScaler(
-                onTap: _hidePasteBox,
-                child: Container(
-                  padding: const EdgeInsets.all(UiSizes.spaceXXS),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.red, size: 16),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }

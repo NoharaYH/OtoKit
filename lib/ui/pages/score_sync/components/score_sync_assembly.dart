@@ -58,17 +58,31 @@ class ScoreSyncAssembly extends StatelessWidget {
               // 日志面板管理
               SyncLogPanel(
                 logs: provider.vpnLog,
+                isTracking:
+                    provider.isTracking &&
+                    provider.trackingGameType == gameType,
                 forceHidden:
                     !provider.isTracking ||
                     provider.trackingGameType != gameType,
                 onCopy: () {
                   Clipboard.setData(ClipboardData(text: provider.vpnLog));
                   context.read<ToastProvider>().show(
-                    "已复制日志",
+                    '已复制日志',
                     ToastType.confirmed,
                   );
                 },
-                onClose: () => provider.stopTracking(),
+                // 传分已结束时直接关闭 (isTracking=false 时由组件绕过确认)
+                onClose: () => provider.stopVpn(),
+                // 传分进行中，用户触发确认 → 告知进程已暂停（界面层语义）
+                onConfirmPause: () => context.read<ToastProvider>().show(
+                  '传分进程已暂停',
+                  ToastType.warning,
+                ),
+                // 用户选择继续
+                onConfirmResume: () => context.read<ToastProvider>().show(
+                  '传分进程继续',
+                  ToastType.confirmed,
+                ),
               ),
             ],
           ),

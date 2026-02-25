@@ -29,6 +29,10 @@ class GameToastCard extends StatelessWidget {
         baseColor = const Color(0xFFFF1744); // Red
         iconData = Icons.error_outline_rounded;
         break;
+      case ToastType.warning:
+        baseColor = const Color(0xFFFFC107); // Yellow — 对齐 verifying
+        iconData = Icons.warning_amber_rounded;
+        break;
     }
 
     final solidBgColor = baseColor.withValues(alpha: 1.0);
