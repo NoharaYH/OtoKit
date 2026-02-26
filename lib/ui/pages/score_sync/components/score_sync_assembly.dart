@@ -41,13 +41,17 @@ class ScoreSyncAssembly extends StatelessWidget {
         final bool isLxnsReady = !needsLxns || provider.isLxnsVerified;
         final bool showSuccessPage = isDfReady && isLxnsReady;
 
+        final isOtherTracking =
+            provider.isTracking && provider.trackingGameType != gameType;
+
         final Widget content = !provider.isStorageLoaded
             ? const SizedBox(width: double.infinity)
             : (showSuccessPage
                   ? _buildSuccessView(context, provider, skin)
-                  : _buildFormView(context, provider));
+                  : _buildFormView(context, provider, isOtherTracking));
 
         return ScoreSyncCard(
+          key: ValueKey('Card_$gameType'),
           mode: mode,
           onModeChanged: onModeChanged,
           child: Column(
@@ -57,6 +61,7 @@ class ScoreSyncAssembly extends StatelessWidget {
 
               // 日志面板管理
               SyncLogPanel(
+                key: ValueKey('Log_$gameType'),
                 logs: provider.vpnLog,
                 isTracking:
                     provider.isTracking &&
@@ -91,13 +96,18 @@ class ScoreSyncAssembly extends StatelessWidget {
     );
   }
 
-  Widget _buildFormView(BuildContext context, TransferProvider provider) {
+  Widget _buildFormView(
+    BuildContext context,
+    TransferProvider provider,
+    bool isOtherTracking,
+  ) {
     return ScoreSyncForm(
-      key: ValueKey<int>(mode),
+      key: ValueKey('Form_${gameType}_$mode'),
       mode: mode,
       dfController: provider.dfController,
       lxnsController: provider.lxnsController,
       isLoading: provider.isLoading,
+      isDisabled: isOtherTracking,
       onVerify: () => _handleVerify(context, provider, mode),
       onDfChanged: () => provider.resetVerification(df: true),
       onLxnsChanged: () => provider.resetVerification(lxns: true),
@@ -111,6 +121,11 @@ class ScoreSyncAssembly extends StatelessWidget {
     TransferProvider provider,
     SkinExtension skin,
   ) {
+    final isCurrentTracking =
+        provider.isTracking && provider.trackingGameType == gameType;
+    final isOtherTracking =
+        provider.isTracking && provider.trackingGameType != gameType;
+
     return Column(
       key: ValueKey<String>('Success_$gameType'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -131,13 +146,15 @@ class ScoreSyncAssembly extends StatelessWidget {
               ),
             ),
             ConfirmButton(
-              text: "返回token填写",
+              text: isOtherTracking ? "请等待当前传分进程结束" : "返回token填写",
               fontSize: 11,
               padding: const EdgeInsets.symmetric(
                 horizontal: UiSizes.spaceXS,
                 vertical: UiSizes.spaceXXS,
               ),
-              onPressed: provider.isTracking
+              onPressed:
+                  provider
+                      .isTracking // 包含 isOtherTracking 和 isCurrentTracking
                   ? null
                   : () {
                       provider.resetVerification(df: true, lxns: true);
@@ -156,7 +173,8 @@ class ScoreSyncAssembly extends StatelessWidget {
         if (gameType == 0)
           MaiDifChoice(
             activeColor: skin.medium,
-            isLoading: provider.isTracking,
+            isLoading: isCurrentTracking,
+            isDisabled: isOtherTracking,
             onImport: (diffs) {
               provider.startImport(gameType: gameType, difficulties: diffs);
               context.read<ToastProvider>().show(
@@ -168,7 +186,8 @@ class ScoreSyncAssembly extends StatelessWidget {
         else
           ChuDifChoice(
             activeColor: skin.medium,
-            isLoading: provider.isTracking,
+            isLoading: isCurrentTracking,
+            isDisabled: isOtherTracking,
             onImport: (diffs) {
               provider.startImport(gameType: gameType, difficulties: diffs);
               context.read<ToastProvider>().show(

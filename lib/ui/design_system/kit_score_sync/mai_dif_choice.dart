@@ -12,12 +12,14 @@ class MaiDifChoice extends StatefulWidget {
   final Color activeColor;
   final ValueChanged<Set<int>> onImport;
   final bool isLoading;
+  final bool isDisabled;
 
   const MaiDifChoice({
     super.key,
     required this.activeColor,
     required this.onImport,
     this.isLoading = false,
+    this.isDisabled = false,
   });
 
   @override
@@ -77,12 +79,12 @@ class _MaiDifChoiceState extends State<MaiDifChoice> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         IgnorePointer(
-          ignoring: widget.isLoading,
+          ignoring: widget.isLoading || widget.isDisabled,
           child: TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 150),
             tween: Tween<double>(
-              begin: widget.isLoading ? 0.5 : 0.0,
-              end: widget.isLoading ? 0.5 : 0.0,
+              begin: (widget.isLoading || widget.isDisabled) ? 0.5 : 0.0,
+              end: (widget.isLoading || widget.isDisabled) ? 0.5 : 0.0,
             ),
             builder: (context, value, child) {
               return ColorFiltered(
@@ -123,7 +125,7 @@ class _MaiDifChoiceState extends State<MaiDifChoice> {
           state: widget.isLoading
               ? ConfirmButtonState.loading
               : ConfirmButtonState.ready,
-          onPressed: _selectedDifficulties.isEmpty
+          onPressed: (_selectedDifficulties.isEmpty || widget.isDisabled)
               ? null
               : () => widget.onImport(_selectedDifficulties),
         ),
@@ -250,12 +252,14 @@ class ChuDifChoice extends StatefulWidget {
   final Color activeColor;
   final ValueChanged<Set<int>> onImport;
   final bool isLoading;
+  final bool isDisabled;
 
   const ChuDifChoice({
     super.key,
     required this.activeColor,
     required this.onImport,
     this.isLoading = false,
+    this.isDisabled = false,
   });
 
   @override
@@ -282,7 +286,9 @@ class _ChuDifChoiceState extends State<ChuDifChoice> {
           state: widget.isLoading
               ? ConfirmButtonState.loading
               : ConfirmButtonState.ready,
-          onPressed: () => widget.onImport({0, 1, 2, 3, 4}),
+          onPressed: widget.isDisabled
+              ? null
+              : () => widget.onImport({0, 1, 2, 3, 4}),
         ),
       ],
     );

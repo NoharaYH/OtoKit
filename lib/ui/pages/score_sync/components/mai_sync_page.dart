@@ -23,6 +23,7 @@ class _MaiSyncPageState extends State<MaiSyncPage> {
       child: Theme(
         data: Theme.of(context).copyWith(extensions: [const MaimaiSkin()]),
         child: ScoreSyncAssembly(
+          key: const ValueKey('ScoreSyncAssembly_Mai'),
           mode: _transferMode,
           onModeChanged: (val) => setState(() => _transferMode = val),
           gameType: 0,

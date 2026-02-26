@@ -134,6 +134,30 @@ class GamePageItem {
 
 ---
 
+## 状态隔离与扩展规程 (State Isolation & Extension Protocol)
+
+### 1. 核心逻辑：组合隔离机制 (Composite Isolation)
+
+通过 "Element 内存键值强制重建 (UI)" + "Stateful 局部私有化托管 (Page)" + "Provider 维度鉴权标记 (Logic)" 三维一体的分布策略来分别管理多页面状态。
+
+### 2. UI 渲染层：ValueKey 气隙隔离 (Element Tree Gap)
+
+- **机制**：利用 Flutter 原生的 `Widget.canUpdate` 判断条件，通过注入硬性 Key 值，强行阻断底层 Element 树对相同组件的内存跨界复用。由底层引擎自动隔离所有隐式状态（例如：表单焦点、文本遗留、折叠动画、日志区残影）。
+- **扩展规程**：未来向轮播器注册任何新游戏页面并调用公共组件 (如 `ScoreSyncAssembly`, `ScoreSyncForm`) 时，**ONLY** 绑定包含页面平台专属标识（如 `gameType`）的衍生特征键。
+- **标本**：`ScoreSyncAssembly(key: ValueKey('ScoreSyncAssembly_$gameType'), ...)`
+
+### 3. Page 业务装配层：宿主状态自持 (Host State Self-Hosting)
+
+- **机制**：外层轮播器所装载的子项，皆定义为独立的 `StatefulWidget` 代理舱（如 `MaiSyncPage`、`ChuSyncPage`）。
+- **扩展规程**：类似 `_transferMode` 这种只决定当前视图渲染选项、不进入数据库和无长驻生命周期的参数，**ONLY** 交由具体衍生页面的 `State` 闭环维系，不参与全局状态树共享。
+
+### 4. Application 全局层：维度标签鉴别 (Dimension Tagging Filter)
+
+- **机制**：鉴于 `TransferProvider` 是全局或父级单例，网络请求与日志广播会跨页面涌动。依赖状态参数 `trackingGameType` 实施接收者身份过滤。
+- **扩展规程**：任何新拓展的页面在触发长生命周期或跨栏异步调度时，必须将当前唯一标志 (如 `Osu` -> `gameType: 2`) 作为指纹传输。日志监控或遮罩等业务组件，依靠 `provider.trackingGameType == currentGameType` 的二元等式开合闸门。
+
+---
+
 **文档版本**: v2.0 (Protocol Update)  
-**最后更新**: 2026-02-24  
+**最后更新**: 2026-02-26  
 **维护者**: Antigravity Assistant Team

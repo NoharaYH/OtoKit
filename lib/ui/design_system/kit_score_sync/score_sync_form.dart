@@ -8,6 +8,7 @@ class ScoreSyncForm extends StatelessWidget {
   final TextEditingController dfController;
   final TextEditingController lxnsController;
   final bool isLoading;
+  final bool isDisabled;
   final VoidCallback onVerify;
   final VoidCallback? onDfChanged;
   final VoidCallback? onLxnsChanged;
@@ -20,6 +21,7 @@ class ScoreSyncForm extends StatelessWidget {
     required this.dfController,
     required this.lxnsController,
     required this.isLoading,
+    this.isDisabled = false,
     required this.onVerify,
     this.onDfChanged,
     this.onLxnsChanged,
@@ -52,11 +54,11 @@ class ScoreSyncForm extends StatelessWidget {
           ),
         SizedBox(height: UiSizes.atomicComponentGap),
         ConfirmButton(
-          text: '验证并保存Token',
+          text: isDisabled ? '请等待当前传分进程结束' : '验证并保存Token',
           state: isLoading
               ? ConfirmButtonState.loading
               : ConfirmButtonState.ready,
-          onPressed: onVerify,
+          onPressed: isDisabled ? null : onVerify,
         ),
       ],
     );

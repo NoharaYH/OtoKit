@@ -23,6 +23,7 @@ class _ChuSyncPageState extends State<ChuSyncPage> {
       child: Theme(
         data: Theme.of(context).copyWith(extensions: [const ChunithmSkin()]),
         child: ScoreSyncAssembly(
+          key: const ValueKey('ScoreSyncAssembly_Chu'),
           mode: _transferMode,
           onModeChanged: (val) => setState(() => _transferMode = val),
           gameType: 1,

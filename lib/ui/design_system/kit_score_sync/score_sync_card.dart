@@ -61,7 +61,7 @@ class ScoreSyncCard extends StatelessWidget {
                   ScoreSyncModeTabs(
                     mode: mode,
                     onModeChanged: onModeChanged,
-                    isDisabled: provider.isTracking,
+                    isDisabled: false,
                   ),
                   child,
                 ],
