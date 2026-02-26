@@ -11,11 +11,13 @@ import '../kit_shared/kit_bounce_scaler.dart';
 class MaiDifChoice extends StatefulWidget {
   final Color activeColor;
   final ValueChanged<Set<int>> onImport;
+  final bool isLoading;
 
   const MaiDifChoice({
     super.key,
     required this.activeColor,
     required this.onImport,
+    this.isLoading = false,
   });
 
   @override
@@ -74,32 +76,53 @@ class _MaiDifChoiceState extends State<MaiDifChoice> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GridView.builder(
-          padding: EdgeInsets.zero,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.2,
-          ),
-          itemCount: _difficulties.length,
-          itemBuilder: (context, index) {
-            final difficulty = _difficulties[index];
-            final isSelected = _selectedDifficulties.contains(index);
+        IgnorePointer(
+          ignoring: widget.isLoading,
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 150),
+            tween: Tween<double>(
+              begin: widget.isLoading ? 0.5 : 0.0,
+              end: widget.isLoading ? 0.5 : 0.0,
+            ),
+            builder: (context, value, child) {
+              return ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withValues(alpha: value),
+                  BlendMode.srcATop,
+                ),
+                child: child,
+              );
+            },
+            child: GridView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 2.2,
+              ),
+              itemCount: _difficulties.length,
+              itemBuilder: (context, index) {
+                final difficulty = _difficulties[index];
+                final isSelected = _selectedDifficulties.contains(index);
 
-            return _DifficultyButton(
-              difficulty: difficulty,
-              isSelected: isSelected,
-              onTap: () => _toggleDifficulty(index),
-            );
-          },
+                return _DifficultyButton(
+                  difficulty: difficulty,
+                  isSelected: isSelected,
+                  onTap: () => _toggleDifficulty(index),
+                );
+              },
+            ),
+          ),
         ),
         const SizedBox(height: UiSizes.defaultPadding),
         ConfirmButton(
           text: '开始导入',
-          state: ConfirmButtonState.ready,
+          state: widget.isLoading
+              ? ConfirmButtonState.loading
+              : ConfirmButtonState.ready,
           onPressed: _selectedDifficulties.isEmpty
               ? null
               : () => widget.onImport(_selectedDifficulties),
@@ -112,7 +135,7 @@ class _MaiDifChoiceState extends State<MaiDifChoice> {
 class _DifficultyButton extends StatefulWidget {
   final Map<String, dynamic> difficulty;
   final bool isSelected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _DifficultyButton({
     required this.difficulty,
@@ -226,11 +249,13 @@ class _DifficultyButtonState extends State<_DifficultyButton> {
 class ChuDifChoice extends StatefulWidget {
   final Color activeColor;
   final ValueChanged<Set<int>> onImport;
+  final bool isLoading;
 
   const ChuDifChoice({
     super.key,
     required this.activeColor,
     required this.onImport,
+    this.isLoading = false,
   });
 
   @override
@@ -254,6 +279,9 @@ class _ChuDifChoiceState extends State<ChuDifChoice> {
         ),
         ConfirmButton(
           text: '开始导入',
+          state: widget.isLoading
+              ? ConfirmButtonState.loading
+              : ConfirmButtonState.ready,
           onPressed: () => widget.onImport({0, 1, 2, 3, 4}),
         ),
       ],

@@ -5,11 +5,13 @@ import '../constants/sizes.dart';
 class ScoreSyncModeTabs extends StatelessWidget {
   final int mode; // 0: Diving Fish, 1: Both, 2: LXNS
   final ValueChanged<int> onModeChanged;
+  final bool isDisabled;
 
   const ScoreSyncModeTabs({
     super.key,
     required this.mode,
     required this.onModeChanged,
+    this.isDisabled = false,
   });
 
   @override
@@ -17,21 +19,40 @@ class ScoreSyncModeTabs extends StatelessWidget {
     final skin = Theme.of(context).extension<SkinExtension>();
     final Color activeColor = skin?.dark ?? Colors.pink;
 
-    return Container(
-      height: 46,
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: UiSizes.atomicComponentGap),
-      padding: const EdgeInsets.all(UiSizes.spaceXXS),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(UiSizes.buttonBorderRadius),
-      ),
-      child: Row(
-        children: [
-          _buildTab(0, '水鱼', activeColor),
-          _buildTab(1, '双平台', activeColor),
-          _buildTab(2, '落雪', activeColor),
-        ],
+    return IgnorePointer(
+      ignoring: isDisabled,
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 150),
+        tween: Tween<double>(
+          begin: isDisabled ? 0.5 : 0.0,
+          end: isDisabled ? 0.5 : 0.0,
+        ),
+        builder: (context, value, child) {
+          return ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: value),
+              BlendMode.srcATop,
+            ),
+            child: child,
+          );
+        },
+        child: Container(
+          height: 46,
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: UiSizes.atomicComponentGap),
+          padding: const EdgeInsets.all(UiSizes.spaceXXS),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(UiSizes.buttonBorderRadius),
+          ),
+          child: Row(
+            children: [
+              _buildTab(0, '水鱼', activeColor),
+              _buildTab(1, '双平台', activeColor),
+              _buildTab(2, '落雪', activeColor),
+            ],
+          ),
+        ),
       ),
     );
   }

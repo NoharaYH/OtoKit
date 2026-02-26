@@ -137,9 +137,11 @@ class ScoreSyncAssembly extends StatelessWidget {
                 horizontal: UiSizes.spaceXS,
                 vertical: UiSizes.spaceXXS,
               ),
-              onPressed: () {
-                provider.resetVerification(df: true, lxns: true);
-              },
+              onPressed: provider.isTracking
+                  ? null
+                  : () {
+                      provider.resetVerification(df: true, lxns: true);
+                    },
             ),
           ],
         ),
@@ -154,6 +156,7 @@ class ScoreSyncAssembly extends StatelessWidget {
         if (gameType == 0)
           MaiDifChoice(
             activeColor: skin.medium,
+            isLoading: provider.isTracking,
             onImport: (diffs) {
               provider.startImport(gameType: gameType, difficulties: diffs);
               context.read<ToastProvider>().show(
@@ -165,6 +168,7 @@ class ScoreSyncAssembly extends StatelessWidget {
         else
           ChuDifChoice(
             activeColor: skin.medium,
+            isLoading: provider.isTracking,
             onImport: (diffs) {
               provider.startImport(gameType: gameType, difficulties: diffs);
               context.read<ToastProvider>().show(

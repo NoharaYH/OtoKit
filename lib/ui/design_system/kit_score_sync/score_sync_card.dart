@@ -58,7 +58,11 @@ class ScoreSyncCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ScoreSyncModeTabs(mode: mode, onModeChanged: onModeChanged),
+                  ScoreSyncModeTabs(
+                    mode: mode,
+                    onModeChanged: onModeChanged,
+                    isDisabled: provider.isTracking,
+                  ),
                   child,
                 ],
               ),
