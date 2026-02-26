@@ -156,6 +156,16 @@ class GamePageItem {
 - **机制**：鉴于 `TransferProvider` 是全局或父级单例，网络请求与日志广播会跨页面涌动。依赖状态参数 `trackingGameType` 实施接收者身份过滤。
 - **扩展规程**：任何新拓展的页面在触发长生命周期或跨栏异步调度时，必须将当前唯一标志 (如 `Osu` -> `gameType: 2`) 作为指纹传输。日志监控或遮罩等业务组件，依靠 `provider.trackingGameType == currentGameType` 的二元等式开合闸门。
 
+### 5. 管家与衣柜的职能隔离 (Provider vs Pseudo-DI)
+
+- **职能界限定义**：
+  - **衣柜 (ThemeExtension DI)**：**被动的打扮工具**。ONLY 负责在视图层被拿取时，提供当前游戏域的专属视觉设定（颜色系、风格等）。**REJECT** 让衣柜感知业务进度、网络状态或执行逻辑计算。
+  - **管家 (Application Provider)**：**只认数据的心智盲区办事员**。ONLY 负责向底层下发跑腿任务，并向全域广播纯粹的进度数据或异常文案。**REJECT** 在 Provider 内出现任何关于颜色 Hex、UI 弹窗样式、具体字号的定义或判断。
+- **短期记忆隔离机制 (Short-term Memory Lockdown)**：
+  - **原理**：缓解“中枢集权隐患”，防止管家变成拥挤的 UI 杂物间。
+  - **规程**：组件层面纯粹的视效动作（如：日志面板是否展开、难度选项的悬停态、表单未确认前的临时输入），**ONLY** 允许驻留在组件自身的 `State` 或局部沙盒中闭环消化。
+  - **REJECT**：严禁将任何“未敲定”的临时 UI 变化跨级上供至 `Provider`，`Provider` ONLY 应在点击“最终执行”的按键时被动接收打包参数。
+
 ---
 
 **文档版本**: v2.0 (Protocol Update)  

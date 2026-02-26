@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import '../../kernel/services/storage_service.dart';
@@ -18,9 +18,9 @@ class TransferProvider extends ChangeNotifier {
   final ApiService _apiService;
   final StorageService _storageService;
 
-  // 用户输入控制器
-  final TextEditingController dfController = TextEditingController();
-  final TextEditingController lxnsController = TextEditingController();
+  // 数据状态
+  String dfToken = '';
+  String lxnsToken = '';
 
   // UI 状态
   bool _isLoading = false;
@@ -118,8 +118,8 @@ class TransferProvider extends ChangeNotifier {
     if (ok == true) {
       // 将 Token 凭证与难度配置一同下发，供原生 DataContext 存储后使用
       await _channel.invokeMethod('startVpn', {
-        'username': dfController.text,
-        'password': lxnsController.text,
+        'username': dfToken,
+        'password': lxnsToken,
         'difficulties': _currentDifficulties.toList(),
       });
     }
@@ -191,8 +191,6 @@ class TransferProvider extends ChangeNotifier {
   @override
   void dispose() {
     _logNotifyTimer?.cancel();
-    dfController.dispose();
-    lxnsController.dispose();
     super.dispose();
   }
 
@@ -202,11 +200,11 @@ class TransferProvider extends ChangeNotifier {
     final lxns = await _storageService.read(StorageService.kLxnsToken);
 
     if (df != null && df.isNotEmpty) {
-      dfController.text = df;
+      dfToken = df;
       _isDivingFishVerified = true;
     }
     if (lxns != null && lxns.isNotEmpty) {
-      lxnsController.text = lxns;
+      lxnsToken = lxns;
       _isLxnsVerified = true;
     }
     _isStorageLoaded = true;
@@ -221,12 +219,13 @@ class TransferProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void handlePaste(String text, {required bool isDf}) {
-    if (isDf) {
-      dfController.text = text;
+  void updateTokens({String? df, String? lxns}) {
+    if (df != null) {
+      dfToken = df;
       _isDivingFishVerified = false;
-    } else {
-      lxnsController.text = text;
+    }
+    if (lxns != null) {
+      lxnsToken = lxns;
       _isLxnsVerified = false;
     }
     notifyListeners();
@@ -242,13 +241,13 @@ class TransferProvider extends ChangeNotifier {
     final needsDf = mode == 0 || mode == 1;
     final needsLxns = mode == 2 || mode == 1;
 
-    if (needsDf && dfController.text.isEmpty) {
+    if (needsDf && dfToken.isEmpty) {
       _errorMessage = "请输入水鱼 Token";
       _isLoading = false;
       notifyListeners();
       return false;
     }
-    if (needsLxns && lxnsController.text.isEmpty) {
+    if (needsLxns && lxnsToken.isEmpty) {
       _errorMessage = "请输入落雪 Token";
       _isLoading = false;
       notifyListeners();
@@ -260,9 +259,7 @@ class TransferProvider extends ChangeNotifier {
       bool lxnsSuccess = _isLxnsVerified;
 
       if (needsDf && !dfSuccess) {
-        dfSuccess = await _apiService.validateDivingFishToken(
-          dfController.text,
-        );
+        dfSuccess = await _apiService.validateDivingFishToken(dfToken);
         if (!dfSuccess) {
           _errorMessage = "水鱼 Token 验证失败";
           _isLoading = false;
@@ -271,7 +268,7 @@ class TransferProvider extends ChangeNotifier {
         }
       }
       if (needsLxns && !lxnsSuccess) {
-        lxnsSuccess = await _apiService.validateLxnsToken(lxnsController.text);
+        lxnsSuccess = await _apiService.validateLxnsToken(lxnsToken);
         if (!lxnsSuccess) {
           _errorMessage = "落雪 Token 验证失败";
           _isLoading = false;
@@ -284,16 +281,10 @@ class TransferProvider extends ChangeNotifier {
       _isLxnsVerified = lxnsSuccess;
 
       if (dfSuccess) {
-        await _storageService.save(
-          StorageService.kDivingFishToken,
-          dfController.text,
-        );
+        await _storageService.save(StorageService.kDivingFishToken, dfToken);
       }
       if (lxnsSuccess) {
-        await _storageService.save(
-          StorageService.kLxnsToken,
-          lxnsController.text,
-        );
+        await _storageService.save(StorageService.kLxnsToken, lxnsToken);
       }
 
       _successMessage = "验证通过，配置已保存";

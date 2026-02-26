@@ -15,7 +15,7 @@ import '../../../design_system/kit_score_sync/mai_dif_choice.dart';
 import '../../../../application/transfer/transfer_provider.dart';
 import '../../../../application/shared/toast_provider.dart';
 
-class ScoreSyncAssembly extends StatelessWidget {
+class ScoreSyncAssembly extends StatefulWidget {
   final int mode;
   final ValueChanged<int> onModeChanged;
   final int gameType;
@@ -28,6 +28,22 @@ class ScoreSyncAssembly extends StatelessWidget {
   });
 
   @override
+  State<ScoreSyncAssembly> createState() => _ScoreSyncAssemblyState();
+}
+
+class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
+  final TextEditingController dfController = TextEditingController();
+  final TextEditingController lxnsController = TextEditingController();
+  bool _initializedControllers = false;
+
+  @override
+  void dispose() {
+    dfController.dispose();
+    lxnsController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<TransferProvider>(
       builder: (context, provider, _) {
@@ -35,14 +51,21 @@ class ScoreSyncAssembly extends StatelessWidget {
             Theme.of(context).extension<SkinExtension>() ?? const MaimaiSkin();
 
         // 验证逻辑与准备状态
-        final needsDf = mode == 0 || mode == 1;
-        final needsLxns = mode == 2 || mode == 1;
+        final needsDf = widget.mode == 0 || widget.mode == 1;
+        final needsLxns = widget.mode == 2 || widget.mode == 1;
         final bool isDfReady = !needsDf || provider.isDivingFishVerified;
         final bool isLxnsReady = !needsLxns || provider.isLxnsVerified;
         final bool showSuccessPage = isDfReady && isLxnsReady;
 
+        // 初始化控制器
+        if (provider.isStorageLoaded && !_initializedControllers) {
+          dfController.text = provider.dfToken;
+          lxnsController.text = provider.lxnsToken;
+          _initializedControllers = true;
+        }
+
         final isOtherTracking =
-            provider.isTracking && provider.trackingGameType != gameType;
+            provider.isTracking && provider.trackingGameType != widget.gameType;
 
         final Widget content = !provider.isStorageLoaded
             ? const SizedBox(width: double.infinity)
@@ -51,9 +74,9 @@ class ScoreSyncAssembly extends StatelessWidget {
                   : _buildFormView(context, provider, isOtherTracking));
 
         return ScoreSyncCard(
-          key: ValueKey('Card_$gameType'),
-          mode: mode,
-          onModeChanged: onModeChanged,
+          key: ValueKey('Card_${widget.gameType}'),
+          mode: widget.mode,
+          onModeChanged: widget.onModeChanged,
           child: Column(
             children: [
               // 内容动画器切换
@@ -71,17 +94,23 @@ class ScoreSyncAssembly extends StatelessWidget {
     bool isOtherTracking,
   ) {
     return ScoreSyncForm(
-      key: ValueKey('Form_${gameType}_$mode'),
-      mode: mode,
-      dfController: provider.dfController,
-      lxnsController: provider.lxnsController,
+      key: ValueKey('Form_${widget.gameType}_${widget.mode}'),
+      mode: widget.mode,
+      dfController: dfController,
+      lxnsController: lxnsController,
       isLoading: provider.isLoading,
       isDisabled: isOtherTracking,
-      onVerify: () => _handleVerify(context, provider, mode),
+      onVerify: () => _handleVerify(context, provider, widget.mode),
       onDfChanged: () => provider.resetVerification(df: true),
       onLxnsChanged: () => provider.resetVerification(lxns: true),
-      onDfPaste: (text) => provider.handlePaste(text, isDf: true),
-      onLxnsPaste: (text) => provider.handlePaste(text, isDf: false),
+      onDfPaste: (text) {
+        dfController.text = text;
+        provider.resetVerification(df: true);
+      },
+      onLxnsPaste: (text) {
+        lxnsController.text = text;
+        provider.resetVerification(lxns: true);
+      },
     );
   }
 
@@ -91,12 +120,12 @@ class ScoreSyncAssembly extends StatelessWidget {
     SkinExtension skin,
   ) {
     final isCurrentTracking =
-        provider.isTracking && provider.trackingGameType == gameType;
+        provider.isTracking && provider.trackingGameType == widget.gameType;
     final isOtherTracking =
-        provider.isTracking && provider.trackingGameType != gameType;
+        provider.isTracking && provider.trackingGameType != widget.gameType;
 
     return Column(
-      key: ValueKey<String>('Success_$gameType'),
+      key: ValueKey<String>('Success_${widget.gameType}'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
@@ -104,7 +133,7 @@ class ScoreSyncAssembly extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                gameType == 0 ? "选择导入难度" : "中二传分设置",
+                widget.gameType == 0 ? "选择导入难度" : "中二传分设置",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -131,7 +160,7 @@ class ScoreSyncAssembly extends StatelessWidget {
             ),
           ],
         ),
-        if (gameType == 0)
+        if (widget.gameType == 0)
           Container(
             height: 1,
             color: Colors.grey.withValues(alpha: 0.3),
@@ -139,32 +168,36 @@ class ScoreSyncAssembly extends StatelessWidget {
               vertical: UiSizes.atomicComponentGap,
             ),
           ),
-        if (gameType == 0)
+        if (widget.gameType == 0)
           MaiDifChoice(
-            activeColor: skin.medium,
             isLoading: isCurrentTracking,
             isDisabled: isOtherTracking,
             onImport: (diffs) {
-              provider.startImport(gameType: gameType, difficulties: diffs);
+              provider.startImport(
+                gameType: widget.gameType,
+                difficulties: diffs,
+              );
             },
           )
         else
           ChuDifChoice(
-            activeColor: skin.medium,
             isLoading: isCurrentTracking,
             isDisabled: isOtherTracking,
             onImport: (diffs) {
-              provider.startImport(gameType: gameType, difficulties: diffs);
+              provider.startImport(
+                gameType: widget.gameType,
+                difficulties: diffs,
+              );
             },
           ),
 
         // 日志面板常驻在难度选择页，随本页生命周期挂载/销毁
         SyncLogPanel(
-          key: ValueKey('Log_$gameType'),
-          logs: provider.getVpnLog(gameType),
+          key: ValueKey('Log_${widget.gameType}'),
+          logs: provider.getVpnLog(widget.gameType),
           isTracking: isCurrentTracking,
           onCopy: () {
-            final currentLogs = provider.getVpnLog(gameType);
+            final currentLogs = provider.getVpnLog(widget.gameType);
             Clipboard.setData(ClipboardData(text: currentLogs));
             provider.appendLog('[COPY]已将控制台内容复制到剪切板');
           },
@@ -181,8 +214,11 @@ class ScoreSyncAssembly extends StatelessWidget {
     TransferProvider provider,
     int mode,
   ) async {
-    final dfToken = provider.dfController.text.trim();
-    final lxnsToken = provider.lxnsController.text.trim();
+    final dfToken = dfController.text.trim();
+    final lxnsToken = lxnsController.text.trim();
+
+    // UI状态打包下沉给中枢：用户敲击结束后，确认执行那刻才提交数据
+    provider.updateTokens(df: dfToken, lxns: lxnsToken);
 
     final needsDf = mode == 0 || mode == 1;
     final needsLxns = mode == 2 || mode == 1;
@@ -198,6 +234,8 @@ class ScoreSyncAssembly extends StatelessWidget {
 
     context.read<ToastProvider>().show('验证中', ToastType.verifying);
     final success = await provider.verifyAndSave(mode: mode);
+
+    if (!mounted) return;
 
     if (success) {
       context.read<ToastProvider>().show(

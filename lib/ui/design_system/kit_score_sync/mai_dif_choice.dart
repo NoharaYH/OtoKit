@@ -9,14 +9,12 @@ import '../kit_shared/kit_bounce_scaler.dart';
 // ============================================================
 
 class MaiDifChoice extends StatefulWidget {
-  final Color activeColor;
   final ValueChanged<Set<int>> onImport;
   final bool isLoading;
   final bool isDisabled;
 
   const MaiDifChoice({
     super.key,
-    required this.activeColor,
     required this.onImport,
     this.isLoading = false,
     this.isDisabled = false,
@@ -249,14 +247,12 @@ class _DifficultyButtonState extends State<_DifficultyButton> {
 // ============================================================
 
 class ChuDifChoice extends StatefulWidget {
-  final Color activeColor;
   final ValueChanged<Set<int>> onImport;
   final bool isLoading;
   final bool isDisabled;
 
   const ChuDifChoice({
     super.key,
-    required this.activeColor,
     required this.onImport,
     this.isLoading = false,
     this.isDisabled = false,
