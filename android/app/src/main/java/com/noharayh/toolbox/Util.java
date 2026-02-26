@@ -15,18 +15,7 @@ import java.util.Set;
 
 public class Util {
     public static Set<Integer> getDifficulties() {
-        Set<Integer> set = new HashSet<>();
-        if (DataContext.BasicEnabled)
-            set.add(0);
-        if (DataContext.AdvancedEnabled)
-            set.add(1);
-        if (DataContext.ExpertEnabled)
-            set.add(2);
-        if (DataContext.MasterEnabled)
-            set.add(3);
-        if (DataContext.RemasterEnabled)
-            set.add(4);
-        return set;
+        return new HashSet<>(DataContext.Difficulties);
     }
 
     public static void copyText(Context context, String link) {

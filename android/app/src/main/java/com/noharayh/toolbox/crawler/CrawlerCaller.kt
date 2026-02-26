@@ -81,5 +81,5 @@ object CrawlerCaller {
         this.listener = null
     }
 
-    private fun getDifficulties() = Util.getDifficulties()
+    private fun getDifficulties(): Set<Int> = DataContext.Difficulties.toSet()
 }

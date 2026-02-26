@@ -37,9 +37,12 @@ class MainActivity : FlutterActivity(),
                 "startVpn" -> {
                     DataContext.Username = call.argument<String>("username")
                     DataContext.Password = call.argument<String>("password")
-                    DataContext.ExpertEnabled = true
-                    DataContext.MasterEnabled = true
-                    DataContext.RemasterEnabled = true
+                    val diffs = call.argument<List<Int>>("difficulties")
+                    if (diffs != null) {
+                        DataContext.Difficulties = diffs
+                    } else {
+                        DataContext.Difficulties = listOf(0, 1, 2, 3, 4, 5)
+                    }
 
                     startService(Intent(this, LocalVpnService::class.java))
                     startService(Intent(this, HttpServerService::class.java))

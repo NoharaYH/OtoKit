@@ -30,6 +30,7 @@ class TransferProvider extends ChangeNotifier {
   bool _isVpnRunning = false;
   bool _isTracking = false;
   int? _trackingGameType;
+  Set<int> _currentDifficulties = {0, 1, 2, 3, 4, 5};
   String? _errorMessage;
   String? _successMessage;
   String _vpnLog = "";
@@ -69,12 +70,17 @@ class TransferProvider extends ChangeNotifier {
       switch (call.method) {
         case 'onStatusChanged':
           _isVpnRunning = call.arguments['isRunning'];
-          if (!_isVpnRunning) {
-            _isTracking = false;
-            _trackingGameType = null;
-          }
           final status = call.arguments['status'] as String?;
           if (status != null) _successMessage = status;
+
+          // 根据 MainActivity 的推送语义分离业务生命周期：
+          // [DONE] 推送: status="传分完成", isRunning=false
+          // [ERROR] 推送: status=null, isRunning=false
+          if (status == '传分完成' || (status == null && !_isVpnRunning)) {
+            _isTracking = false;
+            // 显式保留 _trackingGameType 以避免 SyncLogPanel 被 auto-hidden 机制强制折叠
+            stopVpn(resetState: false);
+          }
           notifyListeners();
           break;
         case 'onLogReceived':
@@ -96,6 +102,7 @@ class TransferProvider extends ChangeNotifier {
       await _channel.invokeMethod('startVpn', {
         'username': dfController.text,
         'password': lxnsController.text,
+        'difficulties': _currentDifficulties.toList(),
       });
     }
   }
@@ -128,6 +135,7 @@ class TransferProvider extends ChangeNotifier {
   }) async {
     _isTracking = true;
     _trackingGameType = gameType;
+    _currentDifficulties = difficulties;
     _vpnLog = "[SYSTEM] 正在启动本地代理环境...\n";
     notifyListeners();
 

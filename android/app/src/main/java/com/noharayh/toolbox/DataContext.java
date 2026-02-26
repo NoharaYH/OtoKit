@@ -19,14 +19,6 @@ public class DataContext {
 
     public static boolean CompatibleMode = false;
 
-    public static boolean BasicEnabled = false;
-
-    public static boolean AdvancedEnabled = false;
-
-    public static boolean ExpertEnabled = true;
-
-    public static boolean MasterEnabled = true;
-
-    public static boolean RemasterEnabled = true;
+    public static java.util.List<Integer> Difficulties = new java.util.ArrayList<>();
 }
 

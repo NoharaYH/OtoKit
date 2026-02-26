@@ -66,9 +66,7 @@ class ScoreSyncAssembly extends StatelessWidget {
                 isTracking:
                     provider.isTracking &&
                     provider.trackingGameType == gameType,
-                forceHidden:
-                    !provider.isTracking ||
-                    provider.trackingGameType != gameType,
+                forceHidden: provider.trackingGameType != gameType,
                 onCopy: () {
                   Clipboard.setData(ClipboardData(text: provider.vpnLog));
                   context.read<ToastProvider>().show(

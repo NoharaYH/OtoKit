@@ -68,6 +68,7 @@ public class WechatCrawler {
         diffMap.put(2, "Expert");
         diffMap.put(3, "Master");
         diffMap.put(4, "Re:Master");
+        diffMap.put(5, "Utage");
         buildHttpClient(false);
     }
 
@@ -109,12 +110,31 @@ public class WechatCrawler {
 
     private static void fetchAndUploadData(String username, String password, Integer diff, Integer retryCount) {
         writeLog("开始获取 " + diffMap.get(diff) + " 难度的数据");
-        Request request = new Request.Builder().url("https://maimai.wahlap.com/maimai-mobile/record/musicGenre/search/?genre=99&diff=" + diff).build();
+        String url;
+        if (diff == 5) {
+            url = "https://maimai.wahlap.com/maimai-mobile/record/musicGenre/search/?genre=99&diff=10";
+        } else {
+            url = "https://maimai.wahlap.com/maimai-mobile/record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
+        }
+        Request request = new Request.Builder().url(url).build();
 
         Call call = client.newCall(request);
         try {
             Response response = call.execute();
             String data = Objects.requireNonNull(response.body()).string();
+            
+            try {
+                java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+                if (!downloadDir.exists()) downloadDir.mkdirs();
+                String fileName = "[SYNC-HTML]-" + diffMap.get(diff).replace(":", "_") + "-" + System.currentTimeMillis() + ".html";
+                java.io.File file = new java.io.File(downloadDir, fileName);
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(file);
+                fos.write(data.getBytes("UTF-8"));
+                fos.close();
+                writeLog("日志已写入: " + fileName);
+            } catch (Exception fileEx) {
+                writeLog("写入日志失败: " + fileEx.getMessage());
+            }
             // Upload data to maimai-prober
             writeLog(diffMap.get(diff) + " 难度的数据已获取，正在上传至水鱼查分器");
             uploadData(diff, "<login><u>" + username + "</u><p>" + password + "</p></login>" + data, 1);
