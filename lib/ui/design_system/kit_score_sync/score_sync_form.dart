@@ -58,6 +58,7 @@ class ScoreSyncForm extends StatelessWidget {
           state: isLoading
               ? ConfirmButtonState.loading
               : ConfirmButtonState.ready,
+          borderRadius: UiSizes.buttonBorderRadius,
           onPressed: isDisabled ? null : onVerify,
         ),
       ],

@@ -19,6 +19,7 @@ class ConfirmButton extends StatefulWidget {
   final double? height;
   final EdgeInsetsGeometry? padding;
   final double fontSize;
+  final double? borderRadius;
 
   const ConfirmButton({
     super.key,
@@ -30,6 +31,7 @@ class ConfirmButton extends StatefulWidget {
     this.height,
     this.padding,
     this.fontSize = 14,
+    this.borderRadius,
   });
 
   @override
@@ -77,7 +79,9 @@ class _ConfirmButtonState extends State<ConfirmButton> {
                 : null),
         decoration: BoxDecoration(
           color: buttonColor,
-          borderRadius: BorderRadius.circular(UiSizes.buttonBorderRadius),
+          borderRadius: BorderRadius.circular(
+            widget.borderRadius ?? UiSizes.buttonBorderRadius,
+          ),
           boxShadow: null,
         ),
         child: Center(

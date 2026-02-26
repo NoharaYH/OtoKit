@@ -33,7 +33,7 @@ class TransferProvider extends ChangeNotifier {
   Set<int> _currentDifficulties = {0, 1, 2, 3, 4, 5};
   String? _errorMessage;
   String? _successMessage;
-  String _vpnLog = "";
+  final Map<int, String> _gameLogs = {};
 
   static const _channel = MethodChannel('com.nohara.otogamer/vpn');
 
@@ -47,7 +47,8 @@ class TransferProvider extends ChangeNotifier {
   int? get trackingGameType => _trackingGameType;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
-  String get vpnLog => _vpnLog;
+  String get vpnLog => _gameLogs[_trackingGameType] ?? "";
+  String getVpnLog(int gameType) => _gameLogs[gameType] ?? "";
 
   Timer? _logNotifyTimer;
 
@@ -57,13 +58,30 @@ class TransferProvider extends ChangeNotifier {
   }
 
   void _handleLog(String msg) {
-    _vpnLog += "$msg\n";
-    // 防抖：高频日志期间避免频繁触发 UI 重建
+    if (_trackingGameType == null) return;
+    // 同时输出到 IDE 调试控制台，响应“控制台内部 print”要求
+    print(msg);
+    _gameLogs[_trackingGameType!] =
+        "${_gameLogs[_trackingGameType!] ?? ""}$msg\n";
+
+    // 对于关键操作标记，立即通知 UI 避免 100ms 防抖带来的视觉滞后
+    if (msg.contains('[PAUSE]') ||
+        msg.contains('[RESUME]') ||
+        msg.contains('[START]')) {
+      _logNotifyTimer?.cancel();
+      notifyListeners();
+      return;
+    }
+
+    // 普通日志保持防抖，避免高频重建
     if (_logNotifyTimer?.isActive ?? false) return;
     _logNotifyTimer = Timer(const Duration(milliseconds: 100), () {
       notifyListeners();
     });
   }
+
+  /// 向控制台追加一行日志（UI 层调用，走防抖通知路径）。
+  void appendLog(String msg) => _handleLog(msg);
 
   void _initChannel() {
     _channel.setMethodCallHandler((call) async {
@@ -107,9 +125,19 @@ class TransferProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> stopVpn({bool resetState = true}) async {
+  Future<bool> stopVpn({
+    bool resetState = true,
+    bool isManually = false,
+  }) async {
+    if (isManually) {
+      appendLog("[STOP] 传分业务已终止");
+    }
     await _channel.invokeMethod('stopVpn');
     if (resetState) {
+      if (_trackingGameType != null && isManually) {
+        // 手动终止时清理对应游戏的日志缓存，实现彻底隔离
+        _gameLogs.remove(_trackingGameType);
+      }
       _isTracking = false;
       _trackingGameType = null;
     }
@@ -136,8 +164,11 @@ class TransferProvider extends ChangeNotifier {
     _isTracking = true;
     _trackingGameType = gameType;
     _currentDifficulties = difficulties;
-    _vpnLog = "[SYSTEM] 正在启动本地代理环境...\n";
+    _gameLogs[gameType] = "";
     notifyListeners();
+
+    appendLog("[START]传分业务挂起");
+    appendLog("[SYSTEM] 正在启动本地代理环境...");
 
     try {
       await startVpn();
@@ -149,14 +180,12 @@ class TransferProvider extends ChangeNotifier {
       final localProxyUrl = "http://127.0.0.2:8284/$randomStr";
       await Clipboard.setData(ClipboardData(text: localProxyUrl));
 
-      _vpnLog += "[VPN] 服务已启动，正在监听网络包\n";
-      _vpnLog += "[CLIPBOARD] 本地中转链接已复制，请前往微信打开\n";
-      _vpnLog += "[HINT] 捕获授权码后，同步将在后台自动完成\n";
+      appendLog("[VPN] 服务已启动，正在监听网络包");
+      appendLog("[CLIPBOARD] 本地中转链接已复制，请前往微信打开");
+      appendLog("[HINT] 捕获授权码后，同步将在后台自动完成");
     } catch (e) {
-      _vpnLog += "[ERROR] 初始化失败: $e\n";
+      appendLog("[ERROR] 初始化失败: $e");
     }
-
-    notifyListeners();
   }
 
   @override

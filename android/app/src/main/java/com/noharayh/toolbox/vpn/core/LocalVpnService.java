@@ -206,7 +206,7 @@ public class LocalVpnService extends VpnService implements Runnable {
             writeLog("Fatal error: %s", e.toString());
         }
 
-        writeLog("VpnProxy terminated.");
+        writeLog("[VPN] 已关闭代理服务");
         dispose();
     }
 

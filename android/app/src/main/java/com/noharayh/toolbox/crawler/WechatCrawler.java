@@ -98,6 +98,10 @@ public class WechatCrawler {
 
     private static void fetchAndUploadData(String username, String password, Set<Integer> difficulties) {
         for (Integer diff : difficulties) {
+            if (CrawlerCaller.isStopped) {
+                writeLog("[SYSTEM] 检测到传分进程已由用户手动终止");
+                return;
+            }
             fetchAndUploadData(username, password, diff, 1);
             // 每次请求后稍微等待，避免触发华立服务器的反爬/并发拦截（567错误）
             try {
@@ -109,6 +113,7 @@ public class WechatCrawler {
     }
 
     private static void fetchAndUploadData(String username, String password, Integer diff, Integer retryCount) {
+        if (CrawlerCaller.isStopped) return;
         writeLog("开始获取 " + diffMap.get(diff) + " 难度的数据");
         String url;
         if (diff == 5) {
@@ -123,18 +128,6 @@ public class WechatCrawler {
             Response response = call.execute();
             String data = Objects.requireNonNull(response.body()).string();
             
-            try {
-                java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
-                if (!downloadDir.exists()) downloadDir.mkdirs();
-                String fileName = "[SYNC-HTML]-" + diffMap.get(diff).replace(":", "_") + "-" + System.currentTimeMillis() + ".html";
-                java.io.File file = new java.io.File(downloadDir, fileName);
-                java.io.FileOutputStream fos = new java.io.FileOutputStream(file);
-                fos.write(data.getBytes("UTF-8"));
-                fos.close();
-                writeLog("日志已写入: " + fileName);
-            } catch (Exception fileEx) {
-                writeLog("写入日志失败: " + fileEx.getMessage());
-            }
             // Upload data to maimai-prober
             writeLog(diffMap.get(diff) + " 难度的数据已获取，正在上传至水鱼查分器");
             uploadData(diff, "<login><u>" + username + "</u><p>" + password + "</p></login>" + data, 1);
@@ -235,7 +228,7 @@ public class WechatCrawler {
         }
 
         int code = response.code();
-        writeLog(String.valueOf(code));
+
         if (code >= 400) {
             Exception exception = new Exception("登陆时出现错误，请重试！");
             onError(exception);

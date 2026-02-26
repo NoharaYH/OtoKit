@@ -35,6 +35,7 @@ class MainActivity : FlutterActivity(),
                     }
                 }
                 "startVpn" -> {
+                    CrawlerCaller.isStopped = false
                     DataContext.Username = call.argument<String>("username")
                     DataContext.Password = call.argument<String>("password")
                     val diffs = call.argument<List<Int>>("difficulties")
@@ -49,6 +50,7 @@ class MainActivity : FlutterActivity(),
                     result.success(null)
                 }
                 "stopVpn" -> {
+                    CrawlerCaller.isStopped = true
                     LocalVpnService.IsRunning = false
                     stopService(Intent(this, HttpServerService::class.java))
                     result.success(null)

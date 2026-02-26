@@ -11,6 +11,12 @@ import java.io.IOException
 object CrawlerCaller {
     private var listener: WechatCrawlerListener? = null
 
+    @JvmField
+    @Volatile
+    var isStopped: Boolean = false
+
+
+
     fun getWechatAuthUrl(): String? {
         return try {
             val crawler = WechatCrawler()
