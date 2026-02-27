@@ -238,11 +238,13 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
     if (!mounted) return;
 
     if (success) {
+      if (!context.mounted) return;
       context.read<ToastProvider>().show(
         provider.successMessage ?? '验证通过',
         ToastType.confirmed,
       );
     } else if (provider.errorMessage != null) {
+      if (!context.mounted) return;
       context.read<ToastProvider>().show(
         provider.errorMessage!,
         ToastType.error,
