@@ -1,4 +1,7 @@
 class UiStrings {
+  // --- App Info ---
+  static const String appName = 'OTOKiT';
+
   // --- Common Actions ---
   static const String confirm = "确认";
   static const String cancel = "取消";

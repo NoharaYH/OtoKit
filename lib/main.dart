@@ -9,6 +9,7 @@ import 'application/shared/toast_provider.dart';
 import 'application/mai/mai_music_provider.dart';
 import 'application/chu/chu_music_provider.dart';
 
+import 'ui/design_system/constants/strings.dart';
 import 'ui/design_system/kit_shared/toast_queue_manager.dart';
 
 void main() {
@@ -34,7 +35,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MaiChuniSync',
+      title: UiStrings.appName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'JiangCheng',
