@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../design_system/constants/colors.dart';
 import 'package:provider/provider.dart';
 import '../../design_system/kit_shared/confirm_button.dart';
 import '../../design_system/constants/strings.dart';
@@ -64,9 +65,9 @@ class _SettingsPageState extends State<SettingsPage> {
         const SnackBar(
           content: Text(
             UiStrings.settingsSaved,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: UiColors.white),
           ),
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: UiColors.success,
         ),
       );
       context.read<NavigationProvider>().closeSettings();
@@ -76,14 +77,14 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: UiColors.transparent,
       child: Stack(
         children: [
           // 毛玻璃背景背板
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(color: Colors.white.withValues(alpha: 0.8)),
+              child: Container(color: UiColors.white.withValues(alpha: 0.8)),
             ),
           ),
           // 真正的界面层
@@ -105,7 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
-                              color: Colors.black87,
+                              color: UiColors.grey800,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -151,7 +152,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     icon: const Icon(
                       Icons.arrow_back_ios_new,
                       size: 28,
-                      color: Colors.blueAccent,
+                      color: UiColors.grey800,
                     ),
                     onPressed: () {
                       context.read<NavigationProvider>().closeSettings();
@@ -174,7 +175,7 @@ class _SettingsPageState extends State<SettingsPage> {
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Colors.blueAccent,
+          color: UiColors.grey800,
         ),
       ),
     );

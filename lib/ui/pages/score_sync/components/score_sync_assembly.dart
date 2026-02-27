@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../design_system/constants/sizes.dart';
+import '../../../design_system/constants/colors.dart';
 import '../../../design_system/visual_skins/skin_extension.dart';
 import '../../../design_system/visual_skins/implementations/maimai_dx/circle_background.dart';
 import '../../../design_system/kit_score_sync/score_sync_card.dart';
@@ -134,10 +135,10 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
             Expanded(
               child: Text(
                 widget.gameType == 0 ? "选择导入难度" : "中二传分设置",
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
+                  color: UiColors.grey800,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -163,7 +164,7 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
         if (widget.gameType == 0)
           Container(
             height: 1,
-            color: Colors.grey.withValues(alpha: 0.3),
+            color: UiColors.grey500.withValues(alpha: 0.3),
             margin: const EdgeInsets.symmetric(
               vertical: UiSizes.atomicComponentGap,
             ),

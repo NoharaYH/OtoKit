@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'constants/sizes.dart';
+import 'constants/colors.dart';
 import 'visual_skins/skin_extension.dart';
 
 /// 页面外壳
@@ -37,7 +38,7 @@ class PageShell extends StatelessWidget {
         backgroundOverride ??
         (skin != null
             ? skin.buildBackground(context)
-            : Container(color: Colors.white)); // Fallback if no skin
+            : Container(color: UiColors.white)); // Fallback if no skin
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -72,7 +73,7 @@ class PageShell extends StatelessWidget {
         ),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: Container(color: Colors.white.withValues(alpha: 0.8)),
+          child: Container(color: UiColors.white.withValues(alpha: 0.8)),
         ),
       ),
     );

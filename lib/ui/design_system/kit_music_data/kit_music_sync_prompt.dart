@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
 import '../../../../logic/mai_music_data/data_sync/mai_sync_handler.dart';
 import '../visual_skins/skin_extension.dart';
 import '../constants/sizes.dart';
@@ -114,11 +115,11 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
           UiSizes.spaceS,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: UiColors.white,
           borderRadius: BorderRadius.circular(UiSizes.cardRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: UiColors.black.withValues(alpha: 0.05),
               blurRadius: 2,
               offset: const Offset(0, 1),
             ),

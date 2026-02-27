@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
 import '../visual_skins/skin_extension.dart';
 import '../constants/animations.dart';
 
@@ -46,11 +47,11 @@ class _KitNavCapsuleState extends State<KitNavCapsule> {
     // 所以我们需要做安全的 null 处理，并提供 fallback 颜色
     final skin = Theme.of(context).extension<SkinExtension>();
 
-    final bgColor = Colors.white;
+    final bgColor = UiColors.white;
 
     // Define colors, providing fallbacks if skin is not available
-    final Color mediumColor = skin?.medium ?? Colors.blueAccent;
-    final Color darkColor = skin?.dark ?? Colors.black87;
+    final Color mediumColor = skin?.medium ?? UiColors.grey500;
+    final Color darkColor = skin?.dark ?? UiColors.grey800;
 
     final contentColor = widget.isSelected
         ? mediumColor
@@ -122,7 +123,11 @@ class _KitNavCapsuleState extends State<KitNavCapsule> {
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: Icon(widget.icon, color: Colors.white, size: 21.6),
+                      child: Icon(
+                        widget.icon,
+                        color: UiColors.white,
+                        size: 21.6,
+                      ),
                     ),
                     if (widget.label != null) ...[
                       const SizedBox(width: 9.6), // 文字距 Icon 的间隙

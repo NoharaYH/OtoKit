@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/sizes.dart';
+import '../constants/colors.dart';
 import 'kit_bounce_scaler.dart';
 
 /// 通用行内确认框内容层 (Stateless)。
@@ -53,10 +54,14 @@ class ConfirmationBox extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(UiSizes.spaceXXS),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.15),
+                  color: UiColors.success.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check, color: Colors.green, size: 16),
+                child: const Icon(
+                  Icons.check,
+                  color: UiColors.success,
+                  size: 16,
+                ),
               ),
             ),
             const SizedBox(width: UiSizes.spaceXS),
@@ -65,10 +70,10 @@ class ConfirmationBox extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(UiSizes.spaceXXS),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.15),
+                  color: UiColors.error.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, color: Colors.red, size: 16),
+                child: const Icon(Icons.close, color: UiColors.error, size: 16),
               ),
             ),
           ],

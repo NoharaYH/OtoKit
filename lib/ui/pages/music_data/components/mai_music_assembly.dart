@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../design_system/constants/colors.dart';
 import '../../../../application/mai/mai_music_provider.dart';
 import '../../../design_system/constants/sizes.dart';
 import '../../../design_system/kit_music_data/kit_music_sync_prompt.dart';
@@ -22,7 +23,7 @@ class MaiMusicAssembly extends StatelessWidget {
               const Center(
                 child: Text(
                   UiStrings.currentNoMusicData,
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                  style: TextStyle(color: UiColors.grey500, fontSize: 14),
                 ),
               ),
               Container(
@@ -64,7 +65,7 @@ class MaiMusicAssembly extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey,
+                    color: UiColors.grey500,
                   ),
                 ),
               ),

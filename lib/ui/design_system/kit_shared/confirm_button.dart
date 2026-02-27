@@ -104,7 +104,7 @@ class _ConfirmButtonState extends State<ConfirmButton> {
                     width: widget.fontSize * 1.5,
                     height: widget.fontSize * 1.5,
                     child: const CircularProgressIndicator(
-                      color: Colors.white,
+                      color: UiColors.white,
                       strokeWidth: 3, // 稍微加粗，更醒目
                     ),
                   )

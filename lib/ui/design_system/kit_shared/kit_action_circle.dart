@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
 import 'kit_bounce_scaler.dart';
 
 /// 统一圆形操作按钮（如设置、菜单开关等）
@@ -13,7 +14,7 @@ class KitActionCircle extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
-    this.backgroundColor = Colors.white,
+    this.backgroundColor = UiColors.white,
   });
 
   @override
