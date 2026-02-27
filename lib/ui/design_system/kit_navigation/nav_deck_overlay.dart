@@ -3,6 +3,7 @@ import '../../../../application/shared/navigation_provider.dart';
 import '../constants/sizes.dart';
 import 'kit_nav_capsule.dart';
 import 'package:provider/provider.dart';
+import '../constants/strings.dart';
 
 class NavDeckOverlay extends StatefulWidget {
   const NavDeckOverlay({super.key});
@@ -112,20 +113,20 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
         tag: PageTag.scoreSync,
         icon: Icons.sync,
         subLabel: 'score data sync',
-        label: '成绩数据同步',
+        label: UiStrings.navScoreSync,
       ),
       _CapsuleItemData(
         tag: PageTag.musicData,
         icon: Icons.library_music,
         subLabel: 'music data base',
-        label: '歌曲数据图鉴',
+        label: UiStrings.navMusicData,
       ),
       // 预留的无功能占位卡
       _CapsuleItemData(
         tag: null,
         icon: Icons.more_horiz,
         subLabel: 'coming soon',
-        label: '敬请期待',
+        label: UiStrings.navComingSoon,
       ),
     ];
 

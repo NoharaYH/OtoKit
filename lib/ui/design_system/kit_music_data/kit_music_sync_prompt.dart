@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../logic/mai_music_data/data_sync/mai_sync_handler.dart';
 import '../visual_skins/skin_extension.dart';
 import '../constants/sizes.dart';
+import '../constants/strings.dart';
 import '../kit_shared/confirm_button.dart';
 
 class KitMusicSyncPrompt extends StatefulWidget {
@@ -74,7 +75,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
       _typedText = '';
     });
 
-    const suffix = '拉取完成';
+    const suffix = UiStrings.pullComplete;
     for (int i = 0; i < suffix.length; i++) {
       await Future.delayed(const Duration(milliseconds: 150));
       if (!mounted) return;
@@ -160,7 +161,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            '曲库内暂无歌曲数据\n是否同步？',
+            UiStrings.noMusicDataPrompt,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
@@ -174,7 +175,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
             children: [
               Expanded(
                 child: ConfirmButton(
-                  text: '确认',
+                  text: UiStrings.confirm,
                   height: 48,
                   fontSize: 16,
                   onPressed: () {
@@ -188,7 +189,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
               const SizedBox(width: UiSizes.spaceS),
               Expanded(
                 child: ConfirmButton(
-                  text: '取消',
+                  text: UiStrings.cancel,
                   height: 48,
                   fontSize: 16,
                   onPressed: () async {
@@ -213,20 +214,21 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
     double progressValue = 0.0;
 
     if (widget.phase == SyncPhase.pulling) {
-      leftText = '正在拉取歌曲数据...';
+      leftText = UiStrings.pullMusicData;
       progressValue = 0.0;
     } else if (widget.phase == SyncPhase.merging) {
       if (_isTyping) {
-        leftText = '正在拉取歌曲数据...$_typedText';
+        leftText = '${UiStrings.pullMusicData}$_typedText';
         progressValue = 0.0;
       } else {
-        leftText = '合并中...';
-        rightText = '歌曲数: ${widget.current}/${widget.total}';
+        leftText = UiStrings.musicMerge;
+        rightText =
+            '${UiStrings.songCountPrefix}${widget.current}/${widget.total}';
         progressValue = widget.total > 0 ? widget.current / widget.total : 0.0;
       }
     } else if (widget.phase == SyncPhase.idle) {
       if (_hasStarted) {
-        leftText = '准备中...';
+        leftText = UiStrings.preparing;
       }
     }
 
@@ -238,7 +240,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
         children: [
           Center(
             child: Text(
-              '正在同步中$dots',
+              '${UiStrings.syncing}$dots',
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,

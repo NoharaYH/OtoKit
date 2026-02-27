@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../application/mai/mai_music_provider.dart';
 import '../../../design_system/constants/sizes.dart';
 import '../../../design_system/kit_music_data/kit_music_sync_prompt.dart';
+import '../../../design_system/constants/strings.dart';
 
 class MaiMusicAssembly extends StatelessWidget {
   const MaiMusicAssembly({super.key});
@@ -20,7 +21,7 @@ class MaiMusicAssembly extends StatelessWidget {
             children: [
               const Center(
                 child: Text(
-                  '当前暂无歌曲数据',
+                  UiStrings.currentNoMusicData,
                   style: TextStyle(color: Colors.grey, fontSize: 14),
                 ),
               ),

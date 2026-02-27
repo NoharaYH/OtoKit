@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
 import '../visual_skins/skin_extension.dart';
 import '../constants/sizes.dart';
 import '../constants/animations.dart';
 import 'kit_bounce_scaler.dart';
 
 /// 按钮状态枚举
-enum ConfirmButtonState {
-  ready, // 普通 / 可点击
-  loading, // 加载中（最高优先级：强制阻塞点击 + 变暗 + 圈圈）
-}
+enum ConfirmButtonState { ready, loading, disabled, hidden }
 
 /// 统一动效按钮 (v2.2 - 简化状态版)
 class ConfirmButton extends StatefulWidget {
@@ -42,12 +40,12 @@ class ConfirmButton extends StatefulWidget {
 class _ConfirmButtonState extends State<ConfirmButton> {
   // Loaded 状态优先级最高，直接阻塞交互
   bool get _isInteractive =>
-      widget.state != ConfirmButtonState.loading && widget.onPressed != null;
+      widget.state == ConfirmButtonState.ready && widget.onPressed != null;
 
   @override
   Widget build(BuildContext context) {
     final skin = Theme.of(context).extension<SkinExtension>();
-    final baseColor = skin?.medium ?? Colors.pink;
+    final baseColor = skin?.medium ?? UiColors.grey500;
 
     // 确定背景色
     Color buttonColor;
@@ -55,13 +53,18 @@ class _ConfirmButtonState extends State<ConfirmButton> {
 
     if (showLoading) {
       // 加载中：亮度严格降低 50%
-      buttonColor = Color.lerp(baseColor, Colors.black, 0.5)!;
+      buttonColor = Color.lerp(baseColor, UiColors.black, 0.5)!;
       showLoading = true;
-    } else if (widget.onPressed == null) {
+    } else if (widget.state == ConfirmButtonState.disabled ||
+        widget.onPressed == null) {
       // 禁用：灰色 (Disabled 状态移除，由 onPressed 是否为空决定)
-      buttonColor = Colors.grey.withValues(alpha: 0.4);
+      buttonColor = UiColors.grey400.withValues(alpha: 0.4);
     } else {
       buttonColor = baseColor;
+    }
+
+    if (widget.state == ConfirmButtonState.hidden) {
+      return const SizedBox.shrink();
     }
 
     return KitBounceScaler(
@@ -106,7 +109,7 @@ class _ConfirmButtonState extends State<ConfirmButton> {
                       if (widget.icon != null) ...[
                         Icon(
                           widget.icon,
-                          color: Colors.white,
+                          color: UiColors.white,
                           size: widget.fontSize * 1.2,
                         ),
                         const SizedBox(width: 8),
@@ -114,7 +117,7 @@ class _ConfirmButtonState extends State<ConfirmButton> {
                       Text(
                         widget.text,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: UiColors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: widget.fontSize,
                           letterSpacing: 0.5,

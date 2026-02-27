@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../design_system/constants/strings.dart';
 
 class ChuMusicAssembly extends StatelessWidget {
   const ChuMusicAssembly({super.key});
@@ -12,7 +13,7 @@ class ChuMusicAssembly extends StatelessWidget {
           Icon(Icons.construction, size: 48, color: Colors.grey),
           SizedBox(height: 16),
           Text(
-            'Chunithm 曲库开发中',
+            UiStrings.chuMusicDev,
             style: TextStyle(color: Colors.grey, fontSize: 16),
           ),
         ],

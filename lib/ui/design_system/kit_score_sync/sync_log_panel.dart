@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
 import '../constants/sizes.dart';
 import '../constants/animations.dart';
 import '../constants/strings.dart';
@@ -241,7 +242,7 @@ class _SyncLogPanelState extends State<SyncLogPanel>
       height: totalHeight,
       margin: const EdgeInsets.only(top: UiSizes.spaceS),
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(color: Colors.transparent),
+      decoration: const BoxDecoration(color: UiColors.transparent),
       child: Column(
         children: [
           AnimatedContainer(
@@ -249,7 +250,7 @@ class _SyncLogPanelState extends State<SyncLogPanel>
             curve: KitAnimationEngine.decelerateCurve,
             height: targetHeight,
             decoration: BoxDecoration(
-              color: const Color(0xFF323232),
+              color: UiColors.grey800,
               borderRadius: BorderRadius.circular(UiSizes.buttonRadius),
             ),
             clipBehavior: Clip.antiAlias,
@@ -316,7 +317,7 @@ class _SyncLogPanelState extends State<SyncLogPanel>
                             horizontal: UiSizes.spaceXS,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: UiColors.white,
                             borderRadius: BorderRadius.circular(
                               UiSizes.buttonRadius,
                             ),
@@ -330,20 +331,20 @@ class _SyncLogPanelState extends State<SyncLogPanel>
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.grey[800],
+                                  color: UiColors.grey800,
                                 ),
                               ),
                               const SizedBox(width: UiSizes.spaceS),
                               _ConfirmIcon(
                                 icon: Icons.check,
-                                color: Colors.green,
+                                color: UiColors.success,
                                 size: 20,
                                 onTap: () => _resolveConfirm(confirmed: true),
                               ),
                               const SizedBox(width: UiSizes.spaceXS),
                               _ConfirmIcon(
                                 icon: Icons.close,
-                                color: Colors.red,
+                                color: UiColors.error,
                                 size: 20,
                                 onTap: () => _resolveConfirm(confirmed: false),
                               ),
@@ -363,7 +364,7 @@ class _SyncLogPanelState extends State<SyncLogPanel>
           child: AnimatedDefaultTextStyle(
             duration: UiAnimations.fast,
             style: const TextStyle(
-              color: Color(0xFFEEEEEE),
+              color: UiColors.grey200,
               fontSize: 13,
               fontFamily: 'monospace',
               height: 1.4,
@@ -375,7 +376,7 @@ class _SyncLogPanelState extends State<SyncLogPanel>
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: RawScrollbar(
                   controller: _scrollController,
-                  thumbColor: Colors.white.withOpacity(0.3),
+                  thumbColor: UiColors.white.withValues(alpha: 0.3),
                   radius: const Radius.circular(3),
                   thickness: 3,
                   interactive: true,
@@ -443,7 +444,7 @@ class _LogIconButton extends StatelessWidget {
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: UiColors.white.withValues(alpha: 0.24),
                   borderRadius: BorderRadius.circular(
                     UiSizes.buttonRadius - 4.0,
                   ),
@@ -454,7 +455,9 @@ class _LogIconButton extends StatelessWidget {
             Icon(
               icon,
               size: iconSize,
-              color: isActive ? Colors.white : Colors.white24,
+              color: isActive
+                  ? UiColors.white
+                  : UiColors.white.withValues(alpha: 0.24),
             ),
           ],
         ),

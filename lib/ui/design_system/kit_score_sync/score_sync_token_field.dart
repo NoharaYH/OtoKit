@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../constants/colors.dart';
 import '../constants/sizes.dart';
 import '../constants/strings.dart';
 import '../kit_shared/kit_animation_engine.dart';
@@ -79,7 +80,7 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
   @override
   Widget build(BuildContext context) {
     final hasContent = widget.controller.text.isNotEmpty;
-    final bgColor = hasContent ? Colors.grey[100] : Colors.grey[300];
+    final bgColor = hasContent ? UiColors.grey100 : UiColors.grey300;
 
     return Column(
       children: [
@@ -93,7 +94,9 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
             margin: const EdgeInsets.only(bottom: UiSizes.atomicComponentGap),
             decoration: BoxDecoration(
               color: bgColor,
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: UiColors.grey500.withValues(alpha: 0.5),
+              ),
               borderRadius: BorderRadius.circular(UiSizes.buttonRadius),
             ),
             padding: const EdgeInsets.only(
@@ -115,8 +118,9 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: widget.hint,
-                      hintStyle: TextStyle(
-                        color: Colors.grey[600],
+                      hintStyle: const TextStyle(
+                        fontFamily: 'Roboto',
+                        color: UiColors.grey600,
                         fontSize: 13,
                       ),
                       isDense: true,
@@ -130,7 +134,7 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
                     onTap: () => setState(() => _showToken = !_showToken),
                     child: Icon(
                       _showToken ? Icons.visibility : Icons.visibility_off,
-                      color: Colors.grey,
+                      color: UiColors.grey500,
                       size: 20,
                     ),
                   ),
@@ -176,8 +180,10 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
               margin: const EdgeInsets.only(bottom: UiSizes.atomicComponentGap),
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
+                color: UiColors.white,
+                border: Border.all(
+                  color: UiColors.grey500.withValues(alpha: 0.5),
+                ),
                 borderRadius: BorderRadius.circular(UiSizes.buttonRadius),
               ),
               padding: const EdgeInsets.symmetric(
@@ -188,16 +194,17 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
                   ? ConfirmationBox(
                       label: const Text(
                         UiStrings.pasteConfirm,
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        style: TextStyle(fontSize: 11, color: UiColors.grey500),
                       ),
                       body: Text(
                         _showToken
                             ? _currentClipboard!
                             : '•' * _currentClipboard!.length.clamp(0, 20),
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
+                          color: UiColors.grey800,
+                          fontFamily: 'Roboto',
                         ),
                         maxLines: 1,
                         overflow: _showToken

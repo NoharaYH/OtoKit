@@ -1,8 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../application/shared/navigation_provider.dart';
 import '../../design_system/kit_shared/confirm_button.dart';
+import '../../design_system/constants/strings.dart';
+import '../../../application/shared/navigation_provider.dart';
 import '../../../kernel/services/storage_service.dart';
 import '../../../kernel/di/injection.dart';
 
@@ -61,7 +62,10 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('设置已保存', style: TextStyle(color: Colors.white)),
+          content: Text(
+            UiStrings.settingsSaved,
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.blueAccent,
         ),
       );
@@ -97,7 +101,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         children: [
                           const Text(
-                            '账号绑定设置',
+                            UiStrings.accountBindSettings,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
@@ -105,32 +109,32 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          _buildSectionHeader('水鱼查分器 (Diving-Fish)'),
+                          _buildSectionHeader(UiStrings.divingFishLabel),
                           TextField(
                             controller: _dfTokenController,
                             decoration: const InputDecoration(
                               labelText: 'Import Token',
-                              hintText: '请输入水鱼个人资料中的 Import Token',
+                              hintText: UiStrings.divingFishImportHint,
                               border: OutlineInputBorder(),
-                              helperText: '用于上传成绩到水鱼查分器',
+                              helperText: UiStrings.divingFishImportHelper,
                             ),
                           ),
                           const SizedBox(height: 24),
 
-                          _buildSectionHeader('落雪查分器 (LXNS)'),
+                          _buildSectionHeader(UiStrings.lxnsLabel),
                           TextField(
                             controller: _lxnsTokenController,
                             decoration: const InputDecoration(
-                              labelText: '开发者 Token',
-                              hintText: '请输入落雪开发者中心的 Token',
+                              labelText: UiStrings.lxnsDevTokenLabel,
+                              hintText: UiStrings.lxnsDevTokenHint,
                               border: OutlineInputBorder(),
-                              helperText: '用于上传成绩到落雪查分器',
+                              helperText: UiStrings.lxnsDevTokenHelper,
                             ),
                           ),
 
                           const SizedBox(height: 40),
                           ConfirmButton(
-                            text: '保存配置',
+                            text: UiStrings.saveConfig,
                             icon: Icons.save,
                             state: _isSaving
                                 ? ConfirmButtonState.loading

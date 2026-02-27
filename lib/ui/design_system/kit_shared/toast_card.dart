@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
 
 import '../../../../application/shared/toast_provider.dart';
 
@@ -18,27 +19,27 @@ class GameToastCard extends StatelessWidget {
 
     switch (type) {
       case ToastType.verifying:
-        baseColor = const Color(0xFFFFC107); // Yellow
-        iconData = Icons.hourglass_top_rounded; // Or generic sync/loading icon
+        baseColor = UiColors.warning;
+        iconData = Icons.hourglass_top_rounded;
         break;
       case ToastType.confirmed:
-        baseColor = const Color(0xFF00C853); // Green
+        baseColor = UiColors.success;
         iconData = Icons.check_circle_outline_rounded;
         break;
       case ToastType.error:
-        baseColor = const Color(0xFFFF1744); // Red
+        baseColor = UiColors.error;
         iconData = Icons.error_outline_rounded;
         break;
       case ToastType.warning:
-        baseColor = const Color(0xFFFFC107); // Yellow — 对齐 verifying
+        baseColor = UiColors.warning;
         iconData = Icons.warning_amber_rounded;
         break;
     }
 
-    final solidBgColor = baseColor.withValues(alpha: 1.0);
+    final solidBgColor = baseColor;
     final solidBorderColor = baseColor;
-    final textColor = Colors.white;
-    final iconColor = Colors.white;
+    final textColor = UiColors.white;
+    final iconColor = UiColors.white;
 
     return Container(
       width: 342,
