@@ -112,6 +112,7 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
         lxnsController.text = text;
         provider.resetVerification(lxns: true);
       },
+      onLxnsOAuth: provider.startLxnsOAuthFlow,
     );
   }
 

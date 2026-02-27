@@ -1,26 +1,28 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
+import 'package:app_links/app_links.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../kernel/services/storage_service.dart';
 import '../../kernel/services/api_service.dart';
 
 /// TransferProvider：纯 UI 状态中转层。
-///
-/// 传分的核心业务逻辑（WechatCrawler、Cookie管理、数据抓取）
-/// 已全量迁移至 Android 原生侧（CrawlerCaller.java + WechatCrawler.java）。
-/// 本类职责仅为：
-///   1. 管理用户输入 (Token 表单)
-///   2. 通过 MethodChannel 向原生层下发指令
-///   3. 接收原生层推送的日志流并提供给 UI 消费
 @injectable
 class TransferProvider extends ChangeNotifier {
   final ApiService _apiService;
   final StorageService _storageService;
+  final _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSubscription;
 
   // 数据状态
   String dfToken = '';
   String lxnsToken = '';
+  String? lxnsRefreshToken;
+  String? _pkceVerifier; // PKCE 原始校验码
 
   // UI 状态
   bool _isLoading = false;
@@ -55,6 +57,109 @@ class TransferProvider extends ChangeNotifier {
   TransferProvider(this._apiService, this._storageService) {
     _loadTokens();
     _initChannel();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
+      debugPrint('[DEEPLINK] Incoming: $uri');
+      // 统一入口: /oauth/callback
+      if (uri.scheme == 'https' &&
+          uri.host == 'app.otokit.com' &&
+          uri.path == '/oauth/callback') {
+        final state = uri.queryParameters['state'];
+        final code = uri.queryParameters['code'];
+
+        // 逻辑分发：识别 tenant=lxns
+        if (state != null && state.contains('lxns') && code != null) {
+          await _handleLxnsOAuth(code);
+        }
+      }
+    });
+  }
+
+  /// 发起落雪 OAuth 授权流程 (PKCE)
+  Future<void> startLxnsOAuthFlow() async {
+    _pkceVerifier = _generateRandomString(128);
+    final challenge = _computeChallenge(_pkceVerifier!);
+
+    // 假设 clientId 为 1, scope 为全权限
+    const clientId = "1";
+    final state = base64Url.encode(
+      utf8.encode("tenant=lxns&nonce=${_generateRandomString(8)}"),
+    );
+
+    final url = Uri.parse(
+      "https://maimai.lxns.net/oauth/authorize"
+      "?client_id=$clientId"
+      "&redirect_uri=${Uri.encodeComponent("https://app.otokit.com/oauth/callback")}"
+      "&response_type=code"
+      "&scope=read+write"
+      "&state=$state"
+      "&code_challenge=$challenge"
+      "&code_challenge_method=S256",
+    );
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      _errorMessage = "无法打开授权页面";
+      notifyListeners();
+    }
+  }
+
+  Future<void> _handleLxnsOAuth(String code) async {
+    if (_pkceVerifier == null) {
+      _errorMessage = "授权校验失败：丢失 PKCE 凭证";
+      notifyListeners();
+      return;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    const clientId = "1";
+    final result = await _apiService.exchangeLxnsCode(
+      code,
+      clientId,
+      _pkceVerifier!,
+    );
+
+    if (result != null) {
+      lxnsToken = result['access_token'];
+      lxnsRefreshToken = result['refresh_token'];
+      _isLxnsVerified = true;
+      _pkceVerifier = null; // 消费后清理
+
+      await _storageService.save(StorageService.kLxnsToken, lxnsToken);
+      if (lxnsRefreshToken != null) {
+        await _storageService.save("lxns_refresh_token", lxnsRefreshToken!);
+      }
+      _successMessage = "落雪 OAuth 授权成功";
+    } else {
+      _errorMessage = "落雪 OAuth 凭证兑换失败";
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // PKCE Helper Functions
+  String _generateRandomString(int length) {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (index) => chars[random.nextInt(chars.length)],
+    ).join();
+  }
+
+  String _computeChallenge(String verifier) {
+    final bytes = ascii.encode(verifier);
+    final digest = sha256.convert(bytes);
+    return base64Url.encode(digest.bytes).replaceAll('=', '');
   }
 
   void _handleLog(String msg) {
@@ -120,6 +225,7 @@ class TransferProvider extends ChangeNotifier {
       await _channel.invokeMethod('startVpn', {
         'username': dfToken,
         'password': lxnsToken,
+        'gameType': _trackingGameType,
         'difficulties': _currentDifficulties.toList(),
       });
     }
@@ -191,6 +297,7 @@ class TransferProvider extends ChangeNotifier {
   @override
   void dispose() {
     _logNotifyTimer?.cancel();
+    _linkSubscription?.cancel();
     super.dispose();
   }
 
@@ -207,6 +314,7 @@ class TransferProvider extends ChangeNotifier {
       lxnsToken = lxns;
       _isLxnsVerified = true;
     }
+    lxnsRefreshToken = await _storageService.read("lxns_refresh_token");
     _isStorageLoaded = true;
     notifyListeners();
   }

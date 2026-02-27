@@ -15,6 +15,7 @@ class ScoreSyncForm extends StatelessWidget {
   final VoidCallback? onLxnsChanged;
   final Function(String)? onDfPaste;
   final Function(String)? onLxnsPaste;
+  final VoidCallback? onLxnsOAuth;
 
   const ScoreSyncForm({
     super.key,
@@ -28,6 +29,7 @@ class ScoreSyncForm extends StatelessWidget {
     this.onLxnsChanged,
     this.onDfPaste,
     this.onLxnsPaste,
+    this.onLxnsOAuth,
   });
 
   @override
@@ -47,7 +49,7 @@ class ScoreSyncForm extends StatelessWidget {
             onPasteConfirmed: onDfPaste,
             isDisabled: isDisabled,
           ),
-        if (needsLxns)
+        if (needsLxns) ...[
           ScoreSyncTokenField(
             controller: lxnsController,
             hint: UiStrings.inputLxnsToken,
@@ -55,6 +57,23 @@ class ScoreSyncForm extends StatelessWidget {
             onPasteConfirmed: onLxnsPaste,
             isDisabled: isDisabled,
           ),
+          SizedBox(height: 8),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ConfirmButton(
+                    text: "通过 OAuth 授权 (推荐)",
+                    fontSize: 12,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    onPressed: isDisabled ? null : onLxnsOAuth,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         SizedBox(height: UiSizes.atomicComponentGap),
         ConfirmButton(
           text: isDisabled

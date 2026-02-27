@@ -38,6 +38,7 @@ class MainActivity : FlutterActivity(),
                     CrawlerCaller.isStopped = false
                     DataContext.Username = call.argument<String>("username")
                     DataContext.Password = call.argument<String>("password")
+                    DataContext.GameType = call.argument<Int>("gameType") ?: 0
                     val diffs = call.argument<List<Int>>("difficulties")
                     if (diffs != null) {
                         DataContext.Difficulties = diffs

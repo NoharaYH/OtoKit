@@ -58,9 +58,7 @@ public class WechatCrawler {
 
     private static final SimpleCookieJar jar = new SimpleCookieJar();
 
-    private static final Map<Integer, String> diffMap = new HashMap<>();
-
-    private static OkHttpClient client = null;
+    private static String friendCode = null;
 
     public WechatCrawler() {
         diffMap.put(0, "Basic");
@@ -68,88 +66,148 @@ public class WechatCrawler {
         diffMap.put(2, "Expert");
         diffMap.put(3, "Master");
         diffMap.put(4, "Re:Master");
-        diffMap.put(5, "Utage");
+        diffMap.put(5, "Utage/WE");
         buildHttpClient(false);
     }
 
-    private static void uploadData(Integer diff, String data, Integer retryCount) {
-        Request request = new Request.Builder().url("https://www.diving-fish.com/api/pageparser/page").addHeader("content-type", "text/plain").post(RequestBody.create(data, TEXT)).build();
+    private static void uploadToDivingFish(Integer diff, String htmlData, String token) {
+        if (token == null || token.isEmpty()) return;
+        
+        String url = (com.noharayh.otokit.DataContext.GameType == 0) 
+            ? "https://www.diving-fish.com/api/maimaidxprober/player/update_records_html"
+            : "https://www.diving-fish.com/api/chunithmprober/player/update_records_html";
 
-        Call call = client.newCall((request));
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("Import-Token", token)
+                .post(RequestBody.create(htmlData, TEXT))
+                .build();
 
-        try {
-            Response response = call.execute();
+        try (Response response = client.newCall(request).execute()) {
             String result = response.body().string();
-            writeLog(diffMap.get(diff) + " 难度数据上传状态：" + result);
+            writeLog("[水鱼] " + diffMap.get(diff) + " 状态: " + result);
         } catch (Exception e) {
-            retryUploadData(e, diff, data, retryCount);
+            writeLog("[水鱼] " + diffMap.get(diff) + " 上传失败: " + e.getMessage());
         }
     }
 
-    private static void retryUploadData(Exception e, Integer diff, String data, Integer currentRetryCount) {
-        writeLog("上传 " + diffMap.get(diff) + " 分数数据至水鱼查分器时出现错误: " + e);
-        if (currentRetryCount < MAX_RETRY_COUNT) {
-            writeLog("进行第" + currentRetryCount + "次重试");
-            uploadData(diff, data, currentRetryCount + 1);
-        } else {
-            writeLog(diffMap.get(diff) + "难度数据上传失败！");
+    private static void uploadToLxns(Integer diff, String htmlData, String token) {
+        if (token == null || token.isEmpty()) return;
+        if (friendCode == null) {
+            fetchFriendCode();
+        }
+        if (friendCode == null) {
+            writeLog("[落雪] 无法获取 friend_code，跳过上传");
+            return;
+        }
+
+        String game = (com.noharayh.otokit.DataContext.GameType == 0) ? "maimai" : "chunithm";
+        String url = "https://maimai.lxns.net/api/v0/" + game + "/player/" + friendCode + "/html";
+
+        Request request = new Request.Builder()
+                .url(url)
+                // 如果是 OAuth Token 则带 Bearer，此处 TransferProvider 传入的可能是 Bearer 格式或纯 Token
+                .addHeader("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token)
+                .post(RequestBody.create(htmlData, TEXT))
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            String result = response.body().string();
+            writeLog("[落雪] " + diffMap.get(diff) + " 状态: " + response.code() + " " + result);
+        } catch (Exception e) {
+            writeLog("[落雪] " + diffMap.get(diff) + " 上传失败: " + e.getMessage());
+        }
+    }
+
+    private static void fetchFriendCode() {
+        writeLog("[SYSTEM] 正在尝试获取玩家 Friend Code...");
+        String url = (com.noharayh.otokit.DataContext.GameType == 0)
+            ? "https://maimai.wahlap.com/maimai-mobile/friend/userFriendCode/"
+            : "https://chunithm.wahlap.com/mobile/friend/userFriendCode/"; // 假设路径一致
+
+        Request request = new Request.Builder().url(url).build();
+        try (Response response = client.newCall(request).execute()) {
+            String html = response.body().string();
+            // 简单正则匹配（示例，需根据实际 HTML 结构调整）
+            // 通常在 <div class="see_through_block">...<span>123456789</span> 结构中
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{12}|\\d{9})").matcher(html);
+            if (matcher.find()) {
+                friendCode = matcher.group(1);
+                writeLog("[SYSTEM] 成功识别 Friend Code: " + friendCode);
+            } else {
+                writeLog("[ERROR] 未能在页面中找到 Friend Code");
+            }
+        } catch (Exception e) {
+            writeLog("[ERROR] 获取 Friend Code 异常: " + e.getMessage());
         }
     }
 
     private static void fetchAndUploadData(String username, String password, Set<Integer> difficulties) {
+        friendCode = null; // 重置
         for (Integer diff : difficulties) {
             if (CrawlerCaller.isStopped) {
                 writeLog("[SYSTEM] 检测到传分进程已由用户手动终止");
                 return;
             }
-            fetchAndUploadData(username, password, diff, 1);
-            // 每次请求后稍微等待，避免触发华立服务器的反爬/并发拦截（567错误）
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                // ignore
-            }
+            fetchAndUploadRawData(username, password, diff, 1);
+            try { Thread.sleep(1200); } catch (InterruptedException e) { }
         }
     }
 
-    private static void fetchAndUploadData(String username, String password, Integer diff, Integer retryCount) {
+    private static void fetchAndUploadRawData(String username, String password, Integer diff, Integer retryCount) {
         if (CrawlerCaller.isStopped) return;
         writeLog("开始获取 " + diffMap.get(diff) + " 难度的数据");
-        String url;
-        if (diff == 5) {
-            url = "https://maimai.wahlap.com/maimai-mobile/record/musicGenre/search/?genre=99&diff=10";
-        } else {
-            url = "https://maimai.wahlap.com/maimai-mobile/record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
-        }
-        Request request = new Request.Builder().url(url).build();
-
-        Call call = client.newCall(request);
-        try {
-            Response response = call.execute();
-            String data = Objects.requireNonNull(response.body()).string();
+        
+        String baseUrl = (com.noharayh.otokit.DataContext.GameType == 0)
+            ? "https://maimai.wahlap.com/maimai-mobile/"
+            : "https://chunithm.wahlap.com/mobile/";
             
-            // Upload data to maimai-prober
-            writeLog(diffMap.get(diff) + " 难度的数据已获取，正在上传至水鱼查分器");
-            uploadData(diff, "<login><u>" + username + "</u><p>" + password + "</p></login>" + data, 1);
-        } catch (Exception e) {
-            retryFetchAndUploadData(e, username, password, diff, retryCount);
-        }
-    }
-
-    private static void retryFetchAndUploadData(Exception e, String username, String password, Integer diff, Integer currentRetryCount) {
-        writeLog("获取 " + diffMap.get(diff) + " 难度数据时出现错误: " + e);
-        if (currentRetryCount < MAX_RETRY_COUNT) {
-            writeLog("进行第" + currentRetryCount + "次重试");
-            fetchAndUploadData(username, password, diff, currentRetryCount + 1);
+        String url;
+        if (com.noharayh.otokit.DataContext.GameType == 0) {
+            url = (diff == 5) 
+                ? baseUrl + "record/musicGenre/search/?genre=99&diff=10"
+                : baseUrl + "record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
         } else {
-            writeLog(diffMap.get(diff) + "难度数据更新失败！");
+            // Chunithm 逻辑按 Docs 描述
+            url = (diff == 5)
+                ? baseUrl + "record/worldsEndList"
+                : baseUrl + "record/musicGenre"; // 需要 POST 参数或特定路由，需进一步确认
+        }
+
+        Request request = new Request.Builder().url(url).build();
+        try (Response response = client.newCall(request).execute()) {
+            String htmlData = Objects.requireNonNull(response.body()).string();
+            writeLog(diffMap.get(diff) + " 原始数据已抓取，正在双向上传...");
+            
+            uploadToDivingFish(diff, htmlData, username);
+            uploadToLxns(diff, htmlData, password);
+        } catch (Exception e) {
+            writeLog("获取 " + diffMap.get(diff) + " 难度数据时出现错误: " + e);
+            if (retryCount < MAX_RETRY_COUNT) {
+                writeLog("进行第" + retryCount + "次重试");
+                fetchAndUploadRawData(username, password, diff, retryCount + 1);
+            }
         }
     }
 
     protected String getWechatAuthUrl() throws IOException {
         this.buildHttpClient(true);
 
-        Request request = new Request.Builder().addHeader("Host", "tgk-wcaime.wahlap.com").addHeader("Upgrade-Insecure-Requests", "1").addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 12; IN2010 Build/RKQ1.211119.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/4317 MMWEBSDK/20220903 Mobile Safari/537.36 MMWEBID/363 MicroMessenger/8.0.28.2240(0x28001C57) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64").addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/wxpic,image/tpg,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9").addHeader("X-Requested-With", "com.tencent.mm").addHeader("Sec-Fetch-Site", "none").addHeader("Sec-Fetch-Mode", "navigate").addHeader("Sec-Fetch-User", "?1").addHeader("Sec-Fetch-Dest", "document").addHeader("Accept-Encoding", "gzip, deflate").addHeader("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7").url("https://tgk-wcaime.wahlap.com/wc_auth/oauth/authorize/maimai-dx").build();
+        String gamePath = (com.noharayh.otokit.DataContext.GameType == 0) ? "maimai-dx" : "chunithm";
+        Request request = new Request.Builder()
+                .addHeader("Host", "tgk-wcaime.wahlap.com")
+                .addHeader("Upgrade-Insecure-Requests", "1")
+                .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 12; IN2010 Build/RKQ1.211119.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/4317 MMWEBSDK/20220903 Mobile Safari/537.36 MMWEBID/363 MicroMessenger/8.0.28.2240(0x28001C57) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64")
+                .addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/wxpic,image/tpg,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+                .addHeader("X-Requested-With", "com.tencent.mm")
+                .addHeader("Sec-Fetch-Site", "none")
+                .addHeader("Sec-Fetch-Mode", "navigate")
+                .addHeader("Sec-Fetch-User", "?1")
+                .addHeader("Sec-Fetch-Dest", "document")
+                .addHeader("Accept-Encoding", "gzip, deflate")
+                .addHeader("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")
+                .url("https://tgk-wcaime.wahlap.com/wc_auth/oauth/authorize/" + gamePath)
+                .build();
 
         Call call = client.newCall(request);
         Response response = call.execute();
