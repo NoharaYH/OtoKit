@@ -57,14 +57,16 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
         // 验证逻辑与准备状态
         final needsDf = widget.mode == 0 || widget.mode == 1;
         final needsLxns = widget.mode == 2 || widget.mode == 1;
-        final bool isDfReady = !needsDf || provider.isDivingFishVerified;
-        final bool isLxnsReady = !needsLxns || provider.isLxnsVerified;
+        final bool isDfReady =
+            !needsDf || provider.isDivingFishVerifiedFor(widget.gameType);
+        final bool isLxnsReady =
+            !needsLxns || provider.isLxnsVerifiedFor(widget.gameType);
         final bool showSuccessPage = isDfReady && isLxnsReady;
 
         // 初始化控制器
         if (provider.isStorageLoaded && !_initializedControllers) {
           dfController.text = provider.dfToken;
-          lxnsController.text = provider.lxnsToken;
+          lxnsController.text = provider.lxnsTokenFor(widget.gameType);
           _initializedControllers = true;
         }
 
@@ -83,7 +85,7 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
           onModeChanged: widget.onModeChanged,
           child: Column(
             children: [
-              // 内容动画器切换
+              // 必须 Expanded 这里的动画器，否则在 success 页面它不知道有多高，导致内容空白
               Expanded(child: TransferContentAnimator(child: content)),
             ],
           ),
@@ -107,18 +109,20 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
       lxnsController: lxnsController,
       isLoading: provider.isLoading,
       isDisabled: isOtherTracking,
-      isLxnsOAuthDone: provider.isLxnsOAuthDone,
+      isLxnsOAuthDone: provider.isLxnsOAuthDoneFor(widget.gameType),
       lxnsFieldKey: lxnsFieldKey,
       onVerify: () => _handleVerify(context, provider, widget.mode),
-      onDfChanged: () => provider.resetVerification(df: true),
-      onLxnsChanged: () => provider.resetVerification(lxns: true),
+      onDfChanged: () =>
+          provider.resetVerification(gameType: widget.gameType, df: true),
+      onLxnsChanged: () =>
+          provider.resetVerification(gameType: widget.gameType, lxns: true),
       onDfPaste: (text) {
         dfController.text = text;
-        provider.resetVerification(df: true);
+        provider.resetVerification(gameType: widget.gameType, df: true);
       },
       onLxnsPaste: (text) {
         lxnsController.text = text;
-        provider.resetVerification(lxns: true);
+        provider.resetVerification(gameType: widget.gameType, lxns: true);
       },
       onLxnsOAuth: () => provider.startLxnsOAuthFlow(gameType: widget.gameType),
     );
@@ -138,42 +142,16 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
       key: ValueKey<String>('Success_${widget.gameType}'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                widget.gameType == 0 ? "选择导入难度" : "中二传分设置",
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: UiColors.grey800,
-                  fontFamily: 'JiangCheng',
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            ConfirmButton(
-              text: isOtherTracking
-                  ? UiStrings.waitTransferEnd
-                  : (widget.mode == 0
-                        ? UiStrings.returnToVfToken
-                        : UiStrings.returnToToken),
-              fontSize: 11,
-              padding: const EdgeInsets.symmetric(
-                horizontal: UiSizes.spaceXS,
-                vertical: UiSizes.spaceXXS,
-              ),
-              onPressed:
-                  provider
-                      .isTracking // 包含 isOtherTracking 和 isCurrentTracking
-                  ? null
-                  : () {
-                      provider.resetVerification(df: true, lxns: true);
-                    },
-            ),
-          ],
+        Text(
+          widget.gameType == 0 ? "选择导入难度" : "中二传分设置",
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: UiColors.grey800,
+            fontFamily: 'JiangCheng',
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         Container(
           height: 1,
@@ -205,7 +183,7 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
             },
           ),
         const SizedBox(height: UiSizes.spaceS),
-        // 日志面板常驻在难度选择页，随本页生命周期挂载/销毁，填满剩余空间
+        // 日志面板展开时填满卡片剩余空间，触底由外部卡片 margin 保证
         Expanded(
           child: SyncLogPanel(
             key: ValueKey('Log_${widget.gameType}'),
@@ -237,7 +215,11 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
     final lxnsToken = lxnsController.text.trim();
 
     // UI状态打包下沉给中枢：用户敲击结束后，确认执行那刻才提交数据
-    provider.updateTokens(df: dfToken, lxns: lxnsToken);
+    provider.updateTokens(
+      gameType: widget.gameType,
+      df: dfToken,
+      lxns: lxnsToken,
+    );
 
     final needsDf = mode == 0 || mode == 1;
     final needsLxns = mode == 2 || mode == 1;

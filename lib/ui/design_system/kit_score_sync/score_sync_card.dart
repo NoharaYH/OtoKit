@@ -64,7 +64,7 @@ class ScoreSyncCard extends StatelessWidget {
                   isDfVerified: provider.isDivingFishVerified,
                   isLxnsVerified: provider.isLxnsVerified,
                 ),
-                // 为下层业务逻辑提供扩张能力，确保内部组件能感知到卡片剩余空间
+                // 必须使用 Expanded，否则内部的 Flexible/GridView 将失去高度基准导致 UI 空白
                 Expanded(child: child),
               ],
             ),

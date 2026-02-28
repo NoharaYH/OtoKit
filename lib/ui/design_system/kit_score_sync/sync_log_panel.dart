@@ -228,8 +228,7 @@ class _SyncLogPanelState extends State<SyncLogPanel>
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 展开态高度 = 填充整个父级提供的空间
-        // 胶囊态高度 = 工具栏高
+        // 展开态高度：恰好填满当前卡片提供的弹性空间
         final double targetHeight = _isExpanded
             ? constraints.maxHeight
             : _toolbarHeight;

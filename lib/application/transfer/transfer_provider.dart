@@ -34,7 +34,7 @@ class TransferProvider extends ChangeNotifier {
   // UI 状态
   bool _isLoading = false;
   bool _isStorageLoaded = false;
-  bool _isDivingFishVerified = false;
+  final Map<int, bool> _isDivingFishVerifiedMap = {};
   final Map<int, bool> _isLxnsVerifiedMap = {};
   bool _isVpnRunning = false;
   bool _isTracking = false;
@@ -48,10 +48,11 @@ class TransferProvider extends ChangeNotifier {
 
   static const _channel = MethodChannel('com.noharayh.otokit/vpn');
 
-  // Getters
+  // Getters (Legacy - primarily for back-compat or active tab)
   bool get isLoading => _isLoading;
   bool get isStorageLoaded => _isStorageLoaded;
-  bool get isDivingFishVerified => _isDivingFishVerified;
+  bool get isDivingFishVerified =>
+      _isDivingFishVerifiedMap[_activeGameType] ?? false;
   bool get isLxnsVerified => _isLxnsVerifiedMap[_activeGameType] ?? false;
   bool get isVpnRunning => _isVpnRunning;
   bool get isTracking => _isTracking;
@@ -61,6 +62,14 @@ class TransferProvider extends ChangeNotifier {
   String get vpnLog => _gameLogs[_trackingGameType] ?? "";
   String getVpnLog(int gameType) => _gameLogs[gameType] ?? "";
   bool get isLxnsOAuthDone => _isLxnsOAuthDoneMap[_activeGameType] ?? false;
+
+  // New Per-Game Getters
+  bool isDivingFishVerifiedFor(int gameType) =>
+      _isDivingFishVerifiedMap[gameType] ?? false;
+  bool isLxnsVerifiedFor(int gameType) => _isLxnsVerifiedMap[gameType] ?? false;
+  bool isLxnsOAuthDoneFor(int gameType) =>
+      _isLxnsOAuthDoneMap[gameType] ?? false;
+  String lxnsTokenFor(int gameType) => _lxnsTokens[gameType] ?? '';
 
   // 当前选中的游戏类型（表单页中接收）
   int _activeGameType = 0;
@@ -399,7 +408,9 @@ class TransferProvider extends ChangeNotifier {
     final df = await _storageService.read(StorageService.kDivingFishToken);
     if (df != null && df.isNotEmpty) {
       dfToken = df;
-      _isDivingFishVerified = true;
+      for (final gt in [0, 1]) {
+        _isDivingFishVerifiedMap[gt] = true;
+      }
     }
 
     // 按游戏隔离加载 LXNS Token
@@ -448,23 +459,30 @@ class TransferProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void resetVerification({bool df = false, bool lxns = false}) {
-    if (df) _isDivingFishVerified = false;
-    if (lxns) _isLxnsVerifiedMap[_activeGameType] = false;
+  void resetVerification({int? gameType, bool df = false, bool lxns = false}) {
+    final targetGt = gameType ?? _activeGameType;
+    if (df) _isDivingFishVerifiedMap[targetGt] = false;
+    if (lxns) _isLxnsVerifiedMap[targetGt] = false;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
   }
 
-  void updateTokens({String? df, String? lxns}) {
+  void updateTokens({int? gameType, String? df, String? lxns}) {
+    final targetGt = gameType ?? _activeGameType;
     if (df != null) {
       dfToken = df;
-      _isDivingFishVerified = false;
+      // 只要 dfToken 变了，全游戏的验证都要重置（因为 dfToken 目前全局一份，但逻辑上建议全游戏失效）
+      for (final gt in [0, 1]) {
+        _isDivingFishVerifiedMap[gt] = false;
+      }
     }
     if (lxns != null) {
-      lxnsToken = lxns;
-      _lxnsTokens[_activeGameType] = lxns;
-      _isLxnsVerifiedMap[_activeGameType] = false;
+      _lxnsTokens[targetGt] = lxns;
+      if (targetGt == _activeGameType) {
+        lxnsToken = lxns;
+      }
+      _isLxnsVerifiedMap[targetGt] = false;
     }
     notifyListeners();
   }
@@ -493,7 +511,7 @@ class TransferProvider extends ChangeNotifier {
     }
 
     try {
-      bool dfSuccess = _isDivingFishVerified;
+      bool dfSuccess = _isDivingFishVerifiedMap[gameType] ?? false;
       bool lxnsSuccess = _isLxnsVerifiedMap[gameType] ?? false;
 
       if (needsDf && !dfSuccess) {
@@ -520,7 +538,7 @@ class TransferProvider extends ChangeNotifier {
         }
       }
 
-      _isDivingFishVerified = dfSuccess;
+      _isDivingFishVerifiedMap[gameType] = dfSuccess;
       _isLxnsVerifiedMap[gameType] = lxnsSuccess;
 
       if (dfSuccess) {

@@ -57,7 +57,9 @@ class ScoreSyncLogoWrapper extends StatelessWidget {
           ),
 
           const SizedBox(height: UiSizes.atomicComponentGap),
-          Flexible(fit: FlexFit.loose, child: child),
+          Expanded(
+            child: Align(alignment: Alignment.topCenter, child: child),
+          ),
         ],
       ),
     );
