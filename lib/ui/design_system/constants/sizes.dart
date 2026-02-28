@@ -40,7 +40,7 @@ class UiSizes {
 
   static double getTopMarginWithSafeArea(BuildContext context) {
     final double base = getTopMargin(context);
-    final double safeTop = MediaQuery.of(context).viewPadding.top;
+    final double safeTop = MediaQuery.of(context).padding.top;
     return safeTop > base ? safeTop + spaceXS : base;
   }
 
@@ -67,6 +67,10 @@ class UiSizes {
   }
 
   static double getDotIndicatorTop(BuildContext context) {
-    return getTopMargin(context) + logoAreaHeight - spaceS;
+    return getTopMarginWithSafeArea(context) +
+        logoAreaHeight +
+        (atomicComponentGap / 2) -
+        4.0 -
+        15.0; // 上挪 12px
   }
 }

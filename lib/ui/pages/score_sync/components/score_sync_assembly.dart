@@ -147,6 +147,7 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: UiColors.grey800,
+                  fontFamily: 'JiangCheng',
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

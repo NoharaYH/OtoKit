@@ -65,6 +65,8 @@ class ScoreSyncCard extends StatelessWidget {
                     mode: mode,
                     onModeChanged: onModeChanged,
                     isDisabled: provider.isTracking,
+                    isDfVerified: provider.isDivingFishVerified,
+                    isLxnsVerified: provider.isLxnsVerified,
                   ),
                   child,
                 ],

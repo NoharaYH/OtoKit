@@ -18,8 +18,9 @@ class ScoreSyncLogoWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topMargin = UiSizes.getTopMarginWithSafeArea(context);
     return Padding(
-      padding: UiSizes.getPageContentPadding(context),
+      padding: UiSizes.getPageContentPadding(context).copyWith(top: topMargin),
       child: Align(
         alignment: Alignment.topCenter,
         child: Column(

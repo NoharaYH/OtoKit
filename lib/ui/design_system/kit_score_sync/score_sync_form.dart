@@ -44,7 +44,6 @@ class ScoreSyncForm extends StatelessWidget {
     return Column(
       key: ValueKey<int>(mode),
       children: [
-        SizedBox(height: UiSizes.atomicComponentGap),
         if (needsDf)
           ScoreSyncTokenField(
             controller: dfController,
@@ -56,30 +55,23 @@ class ScoreSyncForm extends StatelessWidget {
         if (needsLxns) ...[
           // OAuth 模式下，落雪不再需要手动输入 Token 框
           if (!isLxnsOAuthDone)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ConfirmButton(
-                text: UiStrings.authLxnsOAuth,
-                fontSize: 14,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                onPressed: isDisabled ? null : onLxnsOAuth,
-              ),
+            ConfirmButton(
+              text: UiStrings.authLxnsOAuth,
+              fontSize: 14,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              onPressed: isDisabled ? null : onLxnsOAuth,
             )
           else
             // 已授权时显示验证按钮（虽然 OAuth 成功通常即视为验证通过，但保留手动触发同步的入口）
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ConfirmButton(
-                text: UiStrings.authLxnsVerify,
-                fontSize: 14,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                onPressed: isDisabled ? null : onVerify,
-              ),
+            ConfirmButton(
+              text: UiStrings.authLxnsVerify,
+              fontSize: 14,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              onPressed: isDisabled ? null : onVerify,
             ),
         ],
         // 如果是水鱼模式，保留底部的总验证按钮
         if (mode == 0) ...[
-          SizedBox(height: UiSizes.atomicComponentGap),
           ConfirmButton(
             text: isDisabled
                 ? UiStrings.waitTransferEnd

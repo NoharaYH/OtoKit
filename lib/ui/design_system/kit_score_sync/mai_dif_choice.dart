@@ -278,7 +278,11 @@ class _ChuDifChoiceState extends State<ChuDifChoice> {
             padding: EdgeInsets.all(UiSizes.spaceXL),
             child: Text(
               '中二难度选择器（待开发）',
-              style: TextStyle(fontSize: 16, color: UiColors.grey500),
+              style: TextStyle(
+                fontSize: 16,
+                color: UiColors.grey500,
+                fontFamily: 'JiangCheng',
+              ),
             ),
           ),
         ),

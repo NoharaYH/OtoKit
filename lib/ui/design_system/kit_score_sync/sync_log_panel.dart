@@ -332,6 +332,7 @@ class _SyncLogPanelState extends State<SyncLogPanel>
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                   color: UiColors.grey800,
+                                  fontFamily: 'JiangCheng',
                                 ),
                               ),
                               const SizedBox(width: UiSizes.spaceS),

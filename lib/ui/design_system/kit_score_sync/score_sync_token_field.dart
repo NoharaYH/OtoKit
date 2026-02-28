@@ -146,7 +146,7 @@ class ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
                           border: InputBorder.none,
                           hintText: widget.hint,
                           hintStyle: const TextStyle(
-                            fontFamily: 'Roboto',
+                            fontFamily: 'JiangCheng',
                             color: UiColors.grey600,
                             fontSize: 13,
                           ),
@@ -233,10 +233,10 @@ class ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
                                 ? _currentClipboard!
                                 : '•' * _currentClipboard!.length.clamp(0, 20),
                             style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
                               color: UiColors.grey800,
-                              fontFamily: 'Roboto',
+                              fontFamily: 'JiangCheng',
                             ),
                             maxLines: 1,
                             overflow: _showToken
