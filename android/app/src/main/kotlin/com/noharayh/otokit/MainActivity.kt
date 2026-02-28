@@ -39,6 +39,7 @@ class MainActivity : FlutterActivity(),
                     DataContext.Username = call.argument<String>("username")
                     DataContext.Password = call.argument<String>("password")
                     DataContext.GameType = call.argument<Int>("gameType") ?: 0
+                    DataContext.IsOAuth = call.argument<Boolean>("isLxnsOAuth") ?: false
                     val diffs = call.argument<List<Int>>("difficulties")
                     if (diffs != null) {
                         DataContext.Difficulties = diffs

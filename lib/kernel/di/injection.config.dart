@@ -14,9 +14,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:injectable/injectable.dart' as _i526;
 
-import '../../application/transfer/transfer_provider.dart' as _i711;
-import '../services/api_service.dart' as _i340;
-import '../services/storage_service.dart' as _i389;
+import '../../application/transfer/transfer_provider.dart' as _i1034;
+import '../services/api_service.dart' as _i137;
+import '../services/storage_service.dart' as _i306;
+import '../state/transfer_provider.dart' as _i792;
 import 'register_module.dart' as _i291;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -31,14 +32,20 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i558.FlutterSecureStorage>(
       () => registerModule.secureStorage,
     );
-    gh.lazySingleton<_i389.StorageService>(
-      () => _i389.StorageService(gh<_i558.FlutterSecureStorage>()),
+    gh.lazySingleton<_i306.StorageService>(
+      () => _i306.StorageService(gh<_i558.FlutterSecureStorage>()),
     );
-    gh.lazySingleton<_i340.ApiService>(() => _i340.ApiService(gh<_i361.Dio>()));
-    gh.factory<_i711.TransferProvider>(
-      () => _i711.TransferProvider(
-        gh<_i340.ApiService>(),
-        gh<_i389.StorageService>(),
+    gh.lazySingleton<_i137.ApiService>(() => _i137.ApiService(gh<_i361.Dio>()));
+    gh.factory<_i1034.TransferProvider>(
+      () => _i1034.TransferProvider(
+        gh<_i137.ApiService>(),
+        gh<_i306.StorageService>(),
+      ),
+    );
+    gh.factory<_i792.TransferProvider>(
+      () => _i792.TransferProvider(
+        gh<_i137.ApiService>(),
+        gh<_i306.StorageService>(),
       ),
     );
     return this;

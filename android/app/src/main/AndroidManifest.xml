@@ -26,11 +26,18 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!-- LXNS OAuth Deep Link (Prettier URL Adaptation) -->
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="app.otokit.com" android:path="/oauth/callback" />
+            </intent-filter>
+            <!-- 备用协议映射（当无服务器配置 assetlinks 时使用协议回调） -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="otokit" android:host="app.otokit.com" android:path="/oauth/callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
@@ -73,6 +80,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- 允许应用查询并调用微信协议 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="weixin"/>
         </intent>
     </queries>
 </manifest>

@@ -72,7 +72,6 @@ class UiStrings {
   static const String logErrUploadToken = "[{0}] 账号未绑定或Token无效";
 
   // --- Log Messages (Extensions) ---
-  static const String logSysFriendCode = "识别到 FriendCode: {0}";
   static const String logSysPause = "传分业务暂停";
   static const String logSysResume = "传分业务恢复";
   static const String logClipLogCopied = "已复制日志信息";
@@ -88,7 +87,8 @@ class UiStrings {
   static const String confirmEndTransfer = "是否结束传分？";
   static const String waitingLogs = "等待日志输入...";
   static const String pasteConfirm = "是否要粘贴以下内容？";
-  static const String returnToToken = "返回token填写";
+  static const String returnToToken = "返回授权页面";
+  static const String returnToVfToken = "返回Token填写";
 
   // --- Platform/Mode Names ---
   static const String modeDivingFish = "水鱼";
@@ -115,10 +115,12 @@ class UiStrings {
   static const String divingFishImportHint = '请输入水鱼个人资料中的 Import Token';
   static const String divingFishImportHelper = '用于上传成绩到水鱼查分器';
   static const String lxnsLabel = '落雪查分器 (LXNS)';
-  static const String lxnsDevTokenLabel = '开发者 Token';
-  static const String lxnsDevTokenHint = '请输入落雪开发者中心的 Token';
-  static const String lxnsDevTokenHelper = '用于上传成绩到落雪查分器';
+  static const String lxnsDevTokenLabel = '落雪 API 密钥';
+  static const String lxnsDevTokenHint = '授权后可自动获取或手动填入';
+  static const String lxnsDevTokenHelper = '此密钥将用于上传 XML/HTML 成绩数据';
+  static const String authLxnsVerify = "验证并完成";
   static const String saveConfig = '保存配置';
+  static const String authLxnsOAuth = "请使用落雪 OAuth 进行授权";
 
   // --- OAuth & PKCE ---
   static const String errOAuthNoLaunch = "无法打开授权页面";

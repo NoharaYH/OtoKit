@@ -20,6 +20,7 @@ public class DataContext {
     public static boolean CompatibleMode = false;
 
     public static int GameType = 0; // 0: maimai, 1: chunithm
+    public static boolean IsOAuth = false;
     public static java.util.List<Integer> Difficulties = new java.util.ArrayList<>();
 }
 

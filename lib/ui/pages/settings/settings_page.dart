@@ -7,6 +7,7 @@ import '../../design_system/constants/strings.dart';
 import '../../../application/shared/navigation_provider.dart';
 import '../../../kernel/services/storage_service.dart';
 import '../../../kernel/di/injection.dart';
+import '../../../application/transfer/transfer_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -123,6 +124,31 @@ class _SettingsPageState extends State<SettingsPage> {
                           const SizedBox(height: 24),
 
                           _buildSectionHeader(UiStrings.lxnsLabel),
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.link, size: 20),
+                              label: const Text(UiStrings.authLxnsOAuth),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Theme.of(context).primaryColor,
+                                side: BorderSide(
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                context
+                                    .read<TransferProvider>()
+                                    .startLxnsOAuthFlow();
+                              },
+                            ),
+                          ),
                           TextField(
                             controller: _lxnsTokenController,
                             decoration: const InputDecoration(

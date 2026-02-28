@@ -24,22 +24,37 @@ class ApiService {
   }
 
   // Validate LXNS Token (Read-Only)
-  Future<bool> validateLxnsToken(String token) async {
+  Future<bool> validateLxnsToken(
+    String token, {
+    int gameType = 0,
+    bool isOAuth = false,
+  }) async {
     try {
+      final String game = gameType == 0 ? "maimai" : "chunithm";
       final response = await _dio.get(
-        "https://maimai.lxns.net/api/v0/maimai/player",
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        "https://maimai.lxns.net/api/v0/user/$game/player",
+        options: Options(
+          headers: isOAuth
+              ? {"Authorization": "Bearer $token"}
+              : {"X-User-Token": token},
+          receiveTimeout: const Duration(seconds: 10),
+        ),
       );
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        final body = response.data;
+        return body is Map<String, dynamic> && body['success'] == true;
+      }
     } catch (e) {
-      return false;
+      print("[API] Validate LXNS Token Error: $e");
     }
+    return false;
   }
 
-  // LXNS OAuth Exchange Code for Token
+  // LXNS OAuth Exchange Code for Token (PKCE, no client_secret)
   Future<Map<String, dynamic>?> exchangeLxnsCode(
     String code,
     String clientId,
+    String clientSecret,
     String codeVerifier,
   ) async {
     try {
@@ -50,11 +65,14 @@ class ApiService {
           "client_id": clientId,
           "code": code,
           "code_verifier": codeVerifier,
-          "redirect_uri": "https://app.otokit.com/oauth/callback",
+          "redirect_uri": "http://127.0.0.1:34125/oauth/callback",
         },
       );
       if (response.statusCode == 200) {
-        return response.data;
+        final body = response.data;
+        if (body is Map<String, dynamic> && body['data'] is Map) {
+          return body['data'] as Map<String, dynamic>;
+        }
       }
     } catch (e) {
       print("[API] LXNS OAuth Exchange Error: $e");
@@ -66,6 +84,7 @@ class ApiService {
   Future<Map<String, dynamic>?> refreshLxnsToken(
     String refreshToken,
     String clientId,
+    String clientSecret,
   ) async {
     try {
       final response = await _dio.post(
@@ -73,11 +92,15 @@ class ApiService {
         data: {
           "grant_type": "refresh_token",
           "client_id": clientId,
+          "client_secret": clientSecret,
           "refresh_token": refreshToken,
         },
       );
       if (response.statusCode == 200) {
-        return response.data;
+        final body = response.data;
+        if (body is Map<String, dynamic> && body['data'] is Map) {
+          return body['data'] as Map<String, dynamic>;
+        }
       }
     } catch (e) {
       print("[API] LXNS OAuth Refresh Error: $e");

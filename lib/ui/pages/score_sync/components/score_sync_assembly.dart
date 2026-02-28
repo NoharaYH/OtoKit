@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 
 import '../../../design_system/constants/sizes.dart';
 import '../../../design_system/constants/colors.dart';
+import '../../../design_system/constants/strings.dart';
 import '../../../design_system/visual_skins/skin_extension.dart';
 import '../../../design_system/visual_skins/implementations/maimai_dx/circle_background.dart';
 import '../../../design_system/kit_score_sync/score_sync_card.dart';
 import '../../../design_system/kit_score_sync/score_sync_form.dart';
+import '../../../design_system/kit_score_sync/score_sync_token_field.dart';
 import '../../../design_system/kit_score_sync/sync_log_panel.dart';
 import '../../../design_system/kit_score_sync/content_animator.dart';
 import '../../../design_system/kit_shared/confirm_button.dart';
@@ -89,6 +91,9 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
     );
   }
 
+  final GlobalKey<ScoreSyncTokenFieldState> lxnsFieldKey =
+      GlobalKey<ScoreSyncTokenFieldState>();
+
   Widget _buildFormView(
     BuildContext context,
     TransferProvider provider,
@@ -101,6 +106,8 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
       lxnsController: lxnsController,
       isLoading: provider.isLoading,
       isDisabled: isOtherTracking,
+      isLxnsOAuthDone: provider.isLxnsOAuthDone,
+      lxnsFieldKey: lxnsFieldKey,
       onVerify: () => _handleVerify(context, provider, widget.mode),
       onDfChanged: () => provider.resetVerification(df: true),
       onLxnsChanged: () => provider.resetVerification(lxns: true),
@@ -146,7 +153,11 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
               ),
             ),
             ConfirmButton(
-              text: isOtherTracking ? "请等待当前传分进程结束" : "返回token填写",
+              text: isOtherTracking
+                  ? UiStrings.waitTransferEnd
+                  : (widget.mode == 0
+                        ? UiStrings.returnToVfToken
+                        : UiStrings.returnToToken),
               fontSize: 11,
               padding: const EdgeInsets.symmetric(
                 horizontal: UiSizes.spaceXS,
@@ -235,7 +246,10 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
     }
 
     context.read<ToastProvider>().show('验证中', ToastType.verifying);
-    final success = await provider.verifyAndSave(mode: mode);
+    final success = await provider.verifyAndSave(
+      mode: mode,
+      gameType: widget.gameType,
+    );
 
     if (!mounted) return;
 

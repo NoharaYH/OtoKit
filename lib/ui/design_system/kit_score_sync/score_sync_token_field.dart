@@ -24,10 +24,10 @@ class ScoreSyncTokenField extends StatefulWidget {
   });
 
   @override
-  State<ScoreSyncTokenField> createState() => _ScoreSyncTokenFieldState();
+  State<ScoreSyncTokenField> createState() => ScoreSyncTokenFieldState();
 }
 
-class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
+class ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
     with SingleTickerProviderStateMixin {
   bool _showToken = false;
   String? _currentClipboard;
@@ -77,6 +77,12 @@ class _ScoreSyncTokenFieldState extends State<ScoreSyncTokenField>
         setState(() => _currentClipboard = null);
       }
     });
+  }
+
+  /// 公开方法：允许外部注入文本并触发确认框 (用于自动拉取 Token 场景)
+  void showExternalConfirmation(String text) {
+    if (text.isEmpty) return;
+    _showPasteBox(text);
   }
 
   @override

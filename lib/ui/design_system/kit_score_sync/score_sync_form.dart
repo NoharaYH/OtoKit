@@ -10,6 +10,8 @@ class ScoreSyncForm extends StatelessWidget {
   final TextEditingController lxnsController;
   final bool isLoading;
   final bool isDisabled;
+  final bool isLxnsOAuthDone; // 是否已完成 OAuth
+  final GlobalKey? lxnsFieldKey; // 用于触发确认框
   final VoidCallback onVerify;
   final VoidCallback? onDfChanged;
   final VoidCallback? onLxnsChanged;
@@ -24,6 +26,8 @@ class ScoreSyncForm extends StatelessWidget {
     required this.lxnsController,
     required this.isLoading,
     this.isDisabled = false,
+    this.isLxnsOAuthDone = false,
+    this.lxnsFieldKey,
     required this.onVerify,
     this.onDfChanged,
     this.onLxnsChanged,
@@ -50,41 +54,43 @@ class ScoreSyncForm extends StatelessWidget {
             isDisabled: isDisabled,
           ),
         if (needsLxns) ...[
-          ScoreSyncTokenField(
-            controller: lxnsController,
-            hint: UiStrings.inputLxnsToken,
-            onChanged: onLxnsChanged,
-            onPasteConfirmed: onLxnsPaste,
-            isDisabled: isDisabled,
-          ),
-          SizedBox(height: 8),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ConfirmButton(
-                    text: "通过 OAuth 授权 (推荐)",
-                    fontSize: 12,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    onPressed: isDisabled ? null : onLxnsOAuth,
-                  ),
-                ),
-              ],
+          // OAuth 模式下，落雪不再需要手动输入 Token 框
+          if (!isLxnsOAuthDone)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ConfirmButton(
+                text: UiStrings.authLxnsOAuth,
+                fontSize: 14,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                onPressed: isDisabled ? null : onLxnsOAuth,
+              ),
+            )
+          else
+            // 已授权时显示验证按钮（虽然 OAuth 成功通常即视为验证通过，但保留手动触发同步的入口）
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ConfirmButton(
+                text: UiStrings.authLxnsVerify,
+                fontSize: 14,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                onPressed: isDisabled ? null : onVerify,
+              ),
             ),
+        ],
+        // 如果是水鱼模式，保留底部的总验证按钮
+        if (mode == 0) ...[
+          SizedBox(height: UiSizes.atomicComponentGap),
+          ConfirmButton(
+            text: isDisabled
+                ? UiStrings.waitTransferEnd
+                : UiStrings.verifyAndSave,
+            state: isLoading
+                ? ConfirmButtonState.loading
+                : ConfirmButtonState.ready,
+            borderRadius: UiSizes.buttonRadius,
+            onPressed: isDisabled ? null : onVerify,
           ),
         ],
-        SizedBox(height: UiSizes.atomicComponentGap),
-        ConfirmButton(
-          text: isDisabled
-              ? UiStrings.waitTransferEnd
-              : UiStrings.verifyAndSave,
-          state: isLoading
-              ? ConfirmButtonState.loading
-              : ConfirmButtonState.ready,
-          borderRadius: UiSizes.buttonRadius,
-          onPressed: isDisabled ? null : onVerify,
-        ),
       ],
     );
   }

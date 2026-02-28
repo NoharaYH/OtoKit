@@ -11,6 +11,11 @@
 migrate_working_dir/
 .agent/
 
+# Config / Secret
+.env
+lib/kernel/config/env.dart
+lib/kernel/config/env.g.dart
+
 # IntelliJ
 *.iml
 *.ipr

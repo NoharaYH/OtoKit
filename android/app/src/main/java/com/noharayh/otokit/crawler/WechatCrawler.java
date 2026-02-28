@@ -61,8 +61,6 @@ public class WechatCrawler {
     private static final Map<Integer, String> diffMap = new HashMap<>();
     private static final Map<Integer, String> htmlCache = new HashMap<>();
 
-    private static String friendCode = null;
-
     public WechatCrawler() {
         diffMap.put(-1, "用户信息");
         diffMap.put(-2, "最近游玩");
@@ -89,74 +87,58 @@ public class WechatCrawler {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            String result = response.body().string();
-            writeLog("[UPLOAD] [水鱼] 上传" + diffMap.get(diff) + "成功");
+            int code = response.code();
+            if (code >= 200 && code < 300) {
+                writeLog("[UPLOAD] [水鱼] 上传" + diffMap.get(diff) + "成功 状态: " + code);
+            } else {
+                String body = response.body() != null ? response.body().string() : "";
+                writeLog("[ERROR] [水鱼] 上传" + diffMap.get(diff) + "失败: {" + code + " " + body + "}");
+            }
         } catch (Exception e) {
-            writeLog("[ERROR] [水鱼] 上传" + diffMap.get(diff) + "失败: 异常 - " + e.getMessage());
+            writeLog("[ERROR] [水鱼] 上传" + diffMap.get(diff) + "失败: {异常 " + e.getMessage() + "}");
         }
     }
 
     private static void uploadToLxns(Integer diff, String htmlData, String token) {
         if (token == null || token.isEmpty()) return;
-        if (friendCode == null) {
-            fetchFriendCode();
-        }
-        if (friendCode == null) {
-            writeLog("[SYSTEM] 未获取到 FriendCode，跳过落雪上传");
-            return;
-        }
 
         String game = (com.noharayh.otokit.DataContext.GameType == 0) ? "maimai" : "chunithm";
-        String url = "https://maimai.lxns.net/api/v0/" + game + "/player/" + friendCode + "/html";
+        // 官方推荐路径: /api/v0/user/{game}/player/html
+        String url = "https://maimai.lxns.net/api/v0/user/" + game + "/player/html";
 
-        Request request = new Request.Builder()
-                .url(url)
-                // 如果是 OAuth Token 则带 Bearer，此处 TransferProvider 传入的可能是 Bearer 格式或纯 Token
-                .addHeader("Authorization", token.startsWith("Bearer ") ? token : "Bearer " + token)
-                .post(RequestBody.create(htmlData, TEXT))
-                .build();
-
-        try (Response response = client.newCall(request).execute()) {
-            String result = response.body().string();
-            writeLog("[UPLOAD] [落雪] 上传" + diffMap.get(diff) + "成功");
-        } catch (Exception e) {
-            writeLog("[ERROR] [落雪] 上传" + diffMap.get(diff) + "失败: 异常 - " + e.getMessage());
+        Request.Builder builder = new Request.Builder().url(url);
+        
+        // 鉴权逻辑切换: OAuth 使用 Bearer, 个人 API 使用 X-User-Token
+        if (com.noharayh.otokit.DataContext.IsOAuth) {
+            builder.addHeader("Authorization", "Bearer " + token);
+        } else {
+            builder.addHeader("X-User-Token", token);
         }
-    }
 
-    private static void fetchFriendCode() {
-        writeLog("[SYSTEM] 正在尝试获取玩家 Friend Code...");
-        String url = (com.noharayh.otokit.DataContext.GameType == 0)
-            ? "https://maimai.wahlap.com/maimai-mobile/friend/userFriendCode/"
-            : "https://chunithm.wahlap.com/mobile/friend/userFriendCode/"; // 假设路径一致
+        Request request = builder.post(RequestBody.create(htmlData, TEXT)).build();
 
-        Request request = new Request.Builder().url(url).build();
         try (Response response = client.newCall(request).execute()) {
-            String html = response.body().string();
-            // 简单正则匹配（示例，需根据实际 HTML 结构调整）
-            // 通常在 <div class="see_through_block">...<span>123456789</span> 结构中
-            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{12}|\\d{9})").matcher(html);
-            if (matcher.find()) {
-                friendCode = matcher.group(1);
-                writeLog("[SYSTEM] 识别到 FriendCode: " + friendCode);
+            int code = response.code();
+            if (code >= 200 && code < 300) {
+                writeLog("[UPLOAD] [落雪] 上传" + diffMap.get(diff) + "成功 状态: " + code);
             } else {
-                writeLog("[ERROR] 获取用户信息失败: 404 - 未能在页面中找到 Friend Code");
+                String body = response.body() != null ? response.body().string() : "";
+                writeLog("[ERROR] [落雪] 上传" + diffMap.get(diff) + "失败: {" + code + " " + body + "}");
             }
         } catch (Exception e) {
-            writeLog("[ERROR] 获取用户信息失败: 网络 - 获取 Friend Code 异常: " + e.getMessage());
+            writeLog("[ERROR] [落雪] 上传" + diffMap.get(diff) + "失败: {异常 " + e.getMessage() + "}");
         }
     }
 
 
     private static void fetchAndUploadData(String username, String password, Set<Integer> difficulties) {
         htmlCache.clear();
-        friendCode = null;
 
         writeLog("[SYSTEM] 开始获取用户成绩");
 
-        // 舞萌 DX 额外抓取项：用户信息 (解析 friendCode) 与 最近游玩
+        // 舞萌 DX 额外抓取项：用户信息与最近游玩
         if (com.noharayh.otokit.DataContext.GameType == 0) {
-            fetchSingleHtmlToCache(-1); // 用户资料页
+            fetchSingleHtmlToCache(-1); // 用户资料页（落雪规范要求上传）
             sleep(1000);
             fetchSingleHtmlToCache(-2); // 最近游玩页
             sleep(1000);
@@ -171,21 +153,32 @@ public class WechatCrawler {
             sleep(1200); // 抓取间隔保护
         }
 
-        // 阶段 2: 集中上传水鱼
+        // 阶段 2: 集中上传
         if (htmlCache.isEmpty()) {
-            writeLog("[ERROR] 获取成绩失败: 异常 - 未获取到有效 HTML 数据，取消上传");
+            writeLog("[ERROR] 获取成绩失败: {异常 未获取到有效 HTML 数据，取消上传}");
             return;
         }
 
         writeLog("[SYSTEM] 成绩获取完毕，开始上传至目标平台...");
-        writeLog("[SYSTEM] 开始上传至水鱼服务器");
-        for (Map.Entry<Integer, String> entry : htmlCache.entrySet()) {
-            if (CrawlerCaller.isStopped) return;
-            uploadToDivingFish(entry.getKey(), entry.getValue(), username);
-            // uploadToLxns(entry.getKey(), entry.getValue(), password); // 当前仅关注水鱼
+
+        if (username != null && !username.isEmpty()) {
+            writeLog("[SYSTEM] 开始上传至水鱼服务器");
+            for (Map.Entry<Integer, String> entry : htmlCache.entrySet()) {
+                if (CrawlerCaller.isStopped) return;
+                if (entry.getKey() < 0) continue; // 跳过内部页（用户信息/最近游玩）
+                uploadToDivingFish(entry.getKey(), entry.getValue(), username);
+            }
         }
 
-//        writeLog("[DONE] 水鱼同步流程结束");
+        if (password != null && !password.isEmpty()) {
+            writeLog("[SYSTEM] 开始上传至落雪服务器");
+            for (Map.Entry<Integer, String> entry : htmlCache.entrySet()) {
+                if (CrawlerCaller.isStopped) return;
+                if (entry.getKey() < 0) continue; // 跳过用户信息/最近游玩内部页
+                sleep(1000); // 防止触发落雪限流
+                uploadToLxns(entry.getKey(), entry.getValue(), password);
+            }
+        }
     }
 
     private static void fetchSingleHtmlToCache(Integer diff) {
@@ -197,10 +190,12 @@ public class WechatCrawler {
 
         String url;
         if (com.noharayh.otokit.DataContext.GameType == 0) {
-            if (diff == -1) url = baseUrl + "playerData/";
+            // 舞萌 DX
+            if (diff == -1) url = baseUrl + "friend/userFriendCode/"; // 落雪文档要求页，兼含 friendCode
             else if (diff == -2) url = baseUrl + "record/";
             else if (diff == 5) url = baseUrl + "record/musicGenre/search/?genre=99&diff=10";
             else url = baseUrl + "record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
+
         } else {
             // Chunithm 路径
             if (diff == -1) url = baseUrl + "playerData/";
@@ -216,17 +211,11 @@ public class WechatCrawler {
                 writeLog("[WARN] " + diffMap.get(diff) + " 页面响应过短，可能抓取异常");
             }
             htmlCache.put(diff, html);
-            if (diff == -1) {
-                // 自动尝试提取 friendCode (虽然只传水鱼，但保留基础解析能力)
-                java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{12}|\\d{9})").matcher(html);
-                if (matcher.find()) {
-                    friendCode = matcher.group(1);
-                    writeLog("[SYSTEM] 识别到 FriendCode: " + friendCode);
-                }
+            if (diff >= 0) { // 不向前端暴露内部抓取页的日志
+                writeLog("[DOWNLOAD] 已获取 " + diffMap.get(diff) + " 数据");
             }
-            writeLog("[DOWNLOAD] 已获取{" + diffMap.get(diff) + "}数据");
         } catch (Exception e) {
-            writeLog("[ERROR] 获取{" + diffMap.get(diff) + "}失败: 异常 - " + e.getMessage());
+            writeLog("[ERROR] 获取 " + diffMap.get(diff) + " 失败: {异常 " + e.getMessage() + "}");
         }
     }
 

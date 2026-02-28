@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../kernel/config/env.dart';
 import '../../kernel/services/storage_service.dart';
 import '../../kernel/services/api_service.dart';
 import '../../ui/design_system/constants/strings.dart';
@@ -32,6 +34,7 @@ class TransferProvider extends ChangeNotifier {
   bool _isLxnsVerified = false;
   bool _isVpnRunning = false;
   bool _isTracking = false;
+  bool _pendingWechat = false; // 等 VPN 真正启动后再跳微信
   int? _trackingGameType;
   Set<int> _currentDifficulties = {0, 1, 2, 3, 4, 5};
   String? _errorMessage;
@@ -65,7 +68,7 @@ class TransferProvider extends ChangeNotifier {
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
       debugPrint('[DEEPLINK] Incoming: $uri');
       // 统一入口: /oauth/callback
-      if (uri.scheme == 'https' &&
+      if ((uri.scheme == 'https' || uri.scheme == 'otokit') &&
           uri.host == 'app.otokit.com' &&
           uri.path == '/oauth/callback') {
         final state = uri.queryParameters['state'];
@@ -84,18 +87,50 @@ class TransferProvider extends ChangeNotifier {
     _pkceVerifier = _generateRandomString(128);
     final challenge = _computeChallenge(_pkceVerifier!);
 
-    // 假设 clientId 为 1, scope 为全权限
-    const clientId = "1";
     final state = base64Url.encode(
       utf8.encode("tenant=lxns&nonce=${_generateRandomString(8)}"),
     );
 
+    const int oauthPort = 34125;
+    final String redirectUri = "http://127.0.0.1:$oauthPort/oauth/callback";
+
+    try {
+      final server = await HttpServer.bind(
+        InternetAddress.loopbackIPv4,
+        oauthPort,
+        shared: true,
+      );
+      server.listen((HttpRequest request) async {
+        if (request.uri.path == '/oauth/callback') {
+          final code = request.uri.queryParameters['code'];
+          request.response
+            ..statusCode = 200
+            ..headers.contentType = ContentType.html
+            ..write(
+              '<meta charset="utf-8"><body><h2 style="text-align:center;margin-top:50px;">授权成功！您可以关闭此网页并返回 OtoKit。</h2></body>',
+            );
+          await request.response.close();
+          await server.close(force: true);
+
+          if (code != null) {
+            _handleLxnsOAuth(code);
+          }
+        }
+      });
+      // 超时防护：5分钟后自动关闭监听
+      Future.delayed(const Duration(minutes: 5), () {
+        server.close(force: true);
+      });
+    } catch (e) {
+      debugPrint("[OAuth] Server bind error: $e");
+    }
+
     final url = Uri.parse(
       "https://maimai.lxns.net/oauth/authorize"
-      "?client_id=$clientId"
-      "&redirect_uri=${Uri.encodeComponent("https://app.otokit.com/oauth/callback")}"
+      "?client_id=${Env.lxnsClientId}"
+      "&redirect_uri=${Uri.encodeComponent(redirectUri)}"
       "&response_type=code"
-      "&scope=read+write"
+      "&scope=read_user_profile+read_player+write_player+read_user_token"
       "&state=$state"
       "&code_challenge=$challenge"
       "&code_challenge_method=S256",
@@ -109,6 +144,10 @@ class TransferProvider extends ChangeNotifier {
     }
   }
 
+  String? _lxnsOAuthAccessToken;
+  bool _isLxnsOAuthDone = false;
+  bool get isLxnsOAuthDone => _isLxnsOAuthDone;
+
   Future<void> _handleLxnsOAuth(String code) async {
     if (_pkceVerifier == null) {
       _errorMessage = UiStrings.errOAuthNoVerifier;
@@ -120,30 +159,40 @@ class TransferProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    const clientId = "1";
-    final result = await _apiService.exchangeLxnsCode(
-      code,
-      clientId,
-      _pkceVerifier!,
-    );
+    try {
+      final result = await _apiService.exchangeLxnsCode(
+        code,
+        Env.lxnsClientId,
+        Env.lxnsClientSecret,
+        _pkceVerifier!,
+      );
 
-    if (result != null) {
-      lxnsToken = result['access_token'];
-      lxnsRefreshToken = result['refresh_token'];
-      _isLxnsVerified = true;
-      _pkceVerifier = null; // 消费后清理
+      if (result != null) {
+        _lxnsOAuthAccessToken = result['access_token'];
+        lxnsToken = _lxnsOAuthAccessToken!; // 直接设为 lxnsToken
+        lxnsRefreshToken = result['refresh_token'];
+        _isLxnsOAuthDone = true;
+        _isLxnsVerified = true; // OAuth 成功后即视为验证通过
+        _pkceVerifier = null;
 
-      await _storageService.save(StorageService.kLxnsToken, lxnsToken);
-      if (lxnsRefreshToken != null) {
-        await _storageService.save("lxns_refresh_token", lxnsRefreshToken!);
+        await _storageService.save(
+          StorageService.kLxnsToken,
+          lxnsToken,
+        ); // 持久化 access_token 作为当前 session 凭证
+        if (lxnsRefreshToken != null) {
+          await _storageService.save("lxns_refresh_token", lxnsRefreshToken!);
+        }
+        _successMessage = UiStrings.oauthSuccess;
+      } else {
+        _errorMessage = UiStrings.oauthExchangeFailed;
       }
-      _successMessage = UiStrings.oauthSuccess;
-    } else {
-      _errorMessage = UiStrings.oauthExchangeFailed;
+    } catch (e) {
+      debugPrint('[OAuth] Token exchange exception: $e');
+      _errorMessage = '[OAuth] 字符交换异常: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   // PKCE Helper Functions
@@ -228,9 +277,34 @@ class TransferProvider extends ChangeNotifier {
         'username': dfToken,
         'password': lxnsToken,
         'gameType': _trackingGameType,
+        'isLxnsOAuth': _isLxnsOAuthDone, // 设置鉴权模式标识
         'difficulties': _currentDifficulties.toList(),
       });
+      // VPN 已实际启动，此时再执行微信跳转
+      if (_pendingWechat) {
+        _pendingWechat = false;
+        await _afterVpnReady();
+      }
     }
+  }
+
+  /// VPN 实际启动后执行：写剪贴板、跳微信、打印日志。
+  /// 由 startVpn 在两条路径（直接授权 / onVpnPrepared 回调）收口调用。
+  Future<void> _afterVpnReady() async {
+    final randomStr = DateTime.now().millisecondsSinceEpoch
+        .toRadixString(36)
+        .substring(0, 8);
+    final localProxyUrl = "http://127.0.0.2:8284/$randomStr";
+    await Clipboard.setData(ClipboardData(text: localProxyUrl));
+
+    final wxUrl = Uri.parse("weixin://");
+    if (await canLaunchUrl(wxUrl)) {
+      await launchUrl(wxUrl, mode: LaunchMode.externalApplication);
+    }
+
+    appendLog("${UiStrings.logTagVpn} ${UiStrings.logVpnStarted}");
+    appendLog("${UiStrings.logTagClipboard} ${UiStrings.logClipReady}");
+    appendLog(UiStrings.logWaitLink);
   }
 
   Future<bool> stopVpn({
@@ -279,19 +353,14 @@ class TransferProvider extends ChangeNotifier {
     appendLog("${UiStrings.logTagVpn} ${UiStrings.logVpnStarting}");
 
     try {
+      _pendingWechat = true;
       await startVpn();
-
-      // 使用随机 Path 防止微信浏览器缓存上一次的重定向
-      final randomStr = DateTime.now().millisecondsSinceEpoch
-          .toRadixString(36)
-          .substring(0, 8);
-      final localProxyUrl = "http://127.0.0.2:8284/$randomStr";
-      await Clipboard.setData(ClipboardData(text: localProxyUrl));
-
-      appendLog("${UiStrings.logTagVpn} ${UiStrings.logVpnStarted}");
-      appendLog("${UiStrings.logTagClipboard} ${UiStrings.logClipReady}");
-      appendLog(UiStrings.logWaitLink);
+      // 到这里有两种情况：
+      // 1. 已有 VPN 权限 → startVpn 内部已调用 _afterVpnReady，_pendingWechat=false
+      // 2. 首次需要授权 → 系统弹窗未关闭，_pendingWechat 保持 true；
+      //    用户点击允许后 onVpnPrepared 触发 startVpn()，届时再执行 _afterVpnReady
     } catch (e) {
+      _pendingWechat = false;
       appendLog(UiStrings.logErrVpnStart.replaceAll("{0}", e.toString()));
     }
   }
@@ -307,6 +376,7 @@ class TransferProvider extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 300));
     final df = await _storageService.read(StorageService.kDivingFishToken);
     final lxns = await _storageService.read(StorageService.kLxnsToken);
+    final refresh = await _storageService.read("lxns_refresh_token");
 
     if (df != null && df.isNotEmpty) {
       dfToken = df;
@@ -316,7 +386,31 @@ class TransferProvider extends ChangeNotifier {
       lxnsToken = lxns;
       _isLxnsVerified = true;
     }
-    lxnsRefreshToken = await _storageService.read("lxns_refresh_token");
+    lxnsRefreshToken = refresh;
+
+    // access_token 寿命 15 分钟，启动时若有 refresh_token 则静默续期
+    if (lxnsRefreshToken != null && lxnsRefreshToken!.isNotEmpty) {
+      try {
+        final refreshed = await _apiService.refreshLxnsToken(
+          lxnsRefreshToken!,
+          Env.lxnsClientId,
+          Env.lxnsClientSecret,
+        );
+        if (refreshed != null) {
+          lxnsToken = refreshed['access_token'] ?? lxnsToken;
+          lxnsRefreshToken = refreshed['refresh_token'] ?? lxnsRefreshToken;
+          _isLxnsVerified = true;
+          _isLxnsOAuthDone = true; // 具备 Refresh Token 意味着处于 OAuth 模式
+          await _storageService.save(StorageService.kLxnsToken, lxnsToken);
+          if (lxnsRefreshToken != null) {
+            await _storageService.save("lxns_refresh_token", lxnsRefreshToken!);
+          }
+        }
+      } catch (_) {
+        // 静默失败：保留上次 token，由实际传分时暴露错误
+      }
+    }
+
     _isStorageLoaded = true;
     notifyListeners();
   }
@@ -341,7 +435,7 @@ class TransferProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> verifyAndSave({required int mode}) async {
+  Future<bool> verifyAndSave({required int mode, required int gameType}) async {
     _isLoading = true;
     _errorMessage = null;
     _successMessage = null;
@@ -379,7 +473,11 @@ class TransferProvider extends ChangeNotifier {
         }
       }
       if (needsLxns && !lxnsSuccess) {
-        lxnsSuccess = await _apiService.validateLxnsToken(lxnsToken);
+        lxnsSuccess = await _apiService.validateLxnsToken(
+          lxnsToken,
+          gameType: gameType,
+          isOAuth: _isLxnsOAuthDone,
+        );
         if (!lxnsSuccess) {
           _errorMessage = "${UiStrings.modeLxns} ${UiStrings.logTagAuth} 验证失败";
           _isLoading = false;
