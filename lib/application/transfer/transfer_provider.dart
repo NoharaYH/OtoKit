@@ -312,8 +312,6 @@ class TransferProvider extends ChangeNotifier {
         'username': finalDfToken,
         'password': finalLxnsToken,
         'gameType': _trackingGameType,
-        'isLxnsOAuth':
-            _isLxnsOAuthDoneMap[_trackingGameType ?? 0] ?? false, // 设置鉴权模式标识
         'difficulties': _currentDifficulties.toList(),
       });
       // VPN 已实际启动，此时再执行微信跳转
@@ -535,7 +533,6 @@ class TransferProvider extends ChangeNotifier {
         lxnsSuccess = await _apiService.validateLxnsToken(
           currentLxnsToken,
           gameType: gameType,
-          isOAuth: _isLxnsOAuthDoneMap[gameType] ?? false,
         );
         if (!lxnsSuccess) {
           _errorMessage = "${UiStrings.modeLxns} ${UiStrings.logTagAuth} 验证失败";

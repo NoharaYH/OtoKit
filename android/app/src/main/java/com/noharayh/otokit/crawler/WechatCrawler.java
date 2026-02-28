@@ -117,12 +117,8 @@ public class WechatCrawler {
 
         Request.Builder builder = new Request.Builder().url(url);
         
-        // 鉴权逻辑切换: OAuth 使用 Bearer, 个人 API 使用 X-User-Token
-        if (com.noharayh.otokit.DataContext.IsOAuth) {
-            builder.addHeader("Authorization", "Bearer " + token);
-        } else {
-            builder.addHeader("X-User-Token", token);
-        }
+        // 所有落雪传分强制使用 OAuth 规范: Authorization: Bearer <token>
+        builder.addHeader("Authorization", "Bearer " + token);
 
         Request request = builder.post(RequestBody.create(htmlData, TEXT)).build();
 

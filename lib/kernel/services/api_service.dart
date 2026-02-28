@@ -24,19 +24,13 @@ class ApiService {
   }
 
   // Validate LXNS Token (Read-Only)
-  Future<bool> validateLxnsToken(
-    String token, {
-    int gameType = 0,
-    bool isOAuth = false,
-  }) async {
+  Future<bool> validateLxnsToken(String token, {int gameType = 0}) async {
     try {
       final String game = gameType == 0 ? "maimai" : "chunithm";
       final response = await _dio.get(
         "https://maimai.lxns.net/api/v0/user/$game/player",
         options: Options(
-          headers: isOAuth
-              ? {"Authorization": "Bearer $token"}
-              : {"X-User-Token": token},
+          headers: {"Authorization": "Bearer $token"},
           receiveTimeout: const Duration(seconds: 10),
         ),
       );
