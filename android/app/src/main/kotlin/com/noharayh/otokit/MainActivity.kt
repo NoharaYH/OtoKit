@@ -44,7 +44,7 @@ class MainActivity : FlutterActivity(),
                     if (diffs != null) {
                         DataContext.Difficulties = diffs
                     } else {
-                        DataContext.Difficulties = listOf(0, 1, 2, 3, 4, 5)
+                        DataContext.Difficulties = listOf(0, 1, 2, 3, 4, 10)
                     }
 
                     startService(Intent(this, LocalVpnService::class.java))
@@ -111,7 +111,6 @@ class MainActivity : FlutterActivity(),
 
     override fun onFinishUpdate() {
         runOnUiThread {
-            methodChannel?.invokeMethod("onLogReceived", "[DONE] 传分完成")
             methodChannel?.invokeMethod("onStatusChanged", mapOf(
                 "status" to "传分完成",
                 "isRunning" to false

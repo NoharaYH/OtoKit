@@ -101,4 +101,32 @@ class ApiService {
     }
     return null;
   }
+
+  // Upload Maimai JSON Records to Diving Fish
+  Future<Map<String, dynamic>?> uploadMaimaiRecords(
+    String token,
+    List<Map<String, dynamic>> records,
+  ) async {
+    try {
+      final response = await _dio.post(
+        "https://www.diving-fish.com/api/maimaidxprober/player/update_records",
+        data: records,
+        options: Options(
+          headers: {"Import-Token": token},
+          contentType: "application/json",
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      );
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+    } catch (e) {
+      if (e is DioException) {
+        print("[API] Diving Fish Upload Error: ${e.response?.data}");
+      } else {
+        print("[API] Diving Fish Upload Error: $e");
+      }
+    }
+    return null;
+  }
 }

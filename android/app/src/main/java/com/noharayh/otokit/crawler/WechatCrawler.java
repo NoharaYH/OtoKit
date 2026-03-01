@@ -69,7 +69,7 @@ public class WechatCrawler {
         diffMap.put(2, "Expert");
         diffMap.put(3, "Master");
         diffMap.put(4, "Re:Master");
-        diffMap.put(5, "Utage"); // 舞萌宴谱标识，中二 WE 通过 getDiffLabel() 动态覆盖
+        diffMap.put(10, "U·TA·GE"); // 舞萌宴谱标识对齐后端标准
         buildHttpClient(false);
     }
 
@@ -77,17 +77,31 @@ public class WechatCrawler {
     private static String getDiffLabel(int diff) {
         if (com.noharayh.otokit.DataContext.GameType == 1) {
             if (diff == 4) return "ULTIMA";
-            if (diff == 5) return "World's End";
+            if (diff == 5 || diff == 10) return "U·TA·GE"; // 语义统一
         }
         return diffMap.getOrDefault(diff, "难度" + diff);
     }
 
     private static void uploadToDivingFish(Integer diff, String htmlData, String token) {
         if (token == null || token.isEmpty()) return;
-        
-        String url = (com.noharayh.otokit.DataContext.GameType == 0) 
-            ? "https://www.diving-fish.com/api/maimaidxprober/player/update_records_html"
-            : "https://www.diving-fish.com/api/chunithmprober/player/update_records_html";
+
+        // 特殊逻辑：仅针对舞萌的宴谱 (diff=10) 使用 Dart 侧解析及 JSON 上传方案
+        // 目的是绕过官方 HTML 接口对宴谱 DOM 结构的解析错误
+        if (com.noharayh.otokit.DataContext.GameType == 0 && diff == 10) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("type", "diving_fish");
+            data.put("diff", diff);
+            data.put("token", token);
+            data.put("html", htmlData);
+            data.put("gameType", com.noharayh.otokit.DataContext.GameType);
+            writeLog("[HTML_DATA_SYNC]" + new org.json.JSONObject(data).toString());
+            return;
+        }
+
+        // 常规逻辑：其余难度及游戏类型使用原始 HTML 上传方案
+        String url = (com.noharayh.otokit.DataContext.GameType == 0)
+                ? "https://www.diving-fish.com/api/maimaidxprober/player/update_records_html"
+                : "https://www.diving-fish.com/api/chunithmprober/player/update_records_html";
 
         Request request = new Request.Builder()
                 .url(url)
@@ -112,12 +126,9 @@ public class WechatCrawler {
         if (token == null || token.isEmpty()) return;
 
         String game = (com.noharayh.otokit.DataContext.GameType == 0) ? "maimai" : "chunithm";
-        // 官方推荐路径: /api/v0/user/{game}/player/html
         String url = "https://maimai.lxns.net/api/v0/user/" + game + "/player/html";
 
         Request.Builder builder = new Request.Builder().url(url);
-        
-        // 所有落雪传分强制使用 OAuth 规范: Authorization: Bearer <token>
         builder.addHeader("Authorization", "Bearer " + token);
 
         Request request = builder.post(RequestBody.create(htmlData, TEXT)).build();
@@ -204,13 +215,13 @@ public class WechatCrawler {
             // 舞萌 DX 抓取路径
             if (diff == -1) url = baseUrl + "friend/userFriendCode/"; // 落雪规范页：含 friendCode
             else if (diff == -2) url = baseUrl + "record/";           // 最近游玩
-            else if (diff == 5) url = baseUrl + "record/musicGenre/search/?genre=99&diff=10"; // 宴谱 Utage
+            else if (diff == 10) url = baseUrl + "record/musicGenre/search/?genre=99&diff=10"; // 宴谱 Utage
             else url = baseUrl + "record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
         } else {
             // 中二节奏 抓取路径
             if (diff == -1) url = baseUrl + "home/playerData";       // 落雪规范页：含玩家信息
             else if (diff == -2) url = baseUrl + "record/playlog";   // 最近游玩
-            else if (diff == 5) url = baseUrl + "record/worldsEndList"; // World's End
+            else if (diff == 5 || diff == 10) url = baseUrl + "record/worldsEndList"; // World's End (允许 5 或 10)
             else url = baseUrl + "record/musicGenre?difficulty=" + diff; // BASIC~ULTIMA 按难度
         }
 
@@ -282,7 +293,6 @@ public class WechatCrawler {
         // Fetch maimai data
         try {
             this.fetchMaimaiData(username, password, difficulties);
-            writeLog("[SYSTEM] 传分业务完毕");
             finishUpdate();
         } catch (Exception error) {
             writeLog("[ERROR] 网络错误，传分业务终止");

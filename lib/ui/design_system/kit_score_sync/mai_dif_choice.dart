@@ -26,48 +26,54 @@ class MaiDifChoice extends StatefulWidget {
 }
 
 class _MaiDifChoiceState extends State<MaiDifChoice> {
-  // 0: Basic, 1: Advanced, 2: Expert, 3: Master, 4: Re:Master, 5: Utage
-  final Set<int> _selectedDifficulties = {0, 1, 2, 3, 4, 5};
+  // 0: Basic, 1: Advanced, 2: Expert, 3: Master, 4: Re:Master, 10: Utage
+  final Set<int> _selectedDifficulties = {0, 1, 2, 3, 4, 10};
 
   final List<Map<String, dynamic>> _difficulties = [
     {
+      'value': 0,
       'name': 'Basic',
       'asset': AppAssets.difficultyBasic,
       'color': const Color(0xFF45C124),
     },
     {
+      'value': 1,
       'name': 'Advanced',
       'asset': AppAssets.difficultyAdvanced,
       'color': const Color(0xFFFFBA01),
     },
     {
+      'value': 2,
       'name': 'Expert',
       'asset': AppAssets.difficultyExpert,
       'color': const Color(0xFFFF5A66),
     },
     {
+      'value': 3,
       'name': 'Master',
       'asset': AppAssets.difficultyMaster,
       'color': const Color(0xFF9F51DC),
     },
     {
+      'value': 4,
       'name': 'Re:Master',
       'asset': AppAssets.difficultyRemaster,
       'color': const Color(0xFFE6E6E6),
     },
     {
-      'name': 'Utage',
+      'value': 10,
+      'name': 'U·TA·GE',
       'asset': AppAssets.difficultyUtage,
       'color': const Color(0xFFFF6FFD),
     },
   ];
 
-  void _toggleDifficulty(int index) {
+  void _toggleDifficulty(int val) {
     setState(() {
-      if (_selectedDifficulties.contains(index)) {
-        _selectedDifficulties.remove(index);
+      if (_selectedDifficulties.contains(val)) {
+        _selectedDifficulties.remove(val);
       } else {
-        _selectedDifficulties.add(index);
+        _selectedDifficulties.add(val);
       }
     });
   }
@@ -111,12 +117,13 @@ class _MaiDifChoiceState extends State<MaiDifChoice> {
               itemCount: _difficulties.length,
               itemBuilder: (context, index) {
                 final difficulty = _difficulties[index];
-                final isSelected = _selectedDifficulties.contains(index);
+                final val = difficulty['value'] as int;
+                final isSelected = _selectedDifficulties.contains(val);
 
                 return _DifficultyButton(
                   difficulty: difficulty,
                   isSelected: isSelected,
-                  onTap: () => _toggleDifficulty(index),
+                  onTap: () => _toggleDifficulty(val),
                 );
               },
             ),

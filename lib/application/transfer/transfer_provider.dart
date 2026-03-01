@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../kernel/config/env.dart';
 import '../../kernel/services/storage_service.dart';
 import '../../kernel/services/api_service.dart';
+import '../../kernel/services/maimai_html_parser.dart';
 import '../../ui/design_system/constants/strings.dart';
 
 /// TransferProvider：纯 UI 状态中转层。
@@ -241,8 +242,45 @@ class TransferProvider extends ChangeNotifier {
     return base64Url.encode(digest.bytes).replaceAll('=', '');
   }
 
-  void _handleLog(String msg) {
+  void _handleLog(String msg) async {
     if (_trackingGameType == null) return;
+
+    // 拦截 HTML 原始数据，执行手机侧独立解析与上传
+    if (msg.contains("[HTML_DATA_SYNC]")) {
+      try {
+        final rawJson = msg.split("[HTML_DATA_SYNC]")[1];
+        final payload = jsonDecode(rawJson);
+        final html = payload['html'] as String;
+        final token = payload['token'] as String;
+        final diff = payload['diff'] as int;
+        final gameType = payload['gameType'] as int;
+
+        if (gameType == 0) {
+          // Maimai
+          final records = MaimaiHtmlParser.parse(html);
+          if (records.isNotEmpty) {
+            final response = await _apiService.uploadMaimaiRecords(
+              token,
+              records,
+            );
+            if (response != null && response['message'] == '更新成功') {
+              final label = (diff == 10) ? "U·TA·GE" : "难度$diff";
+              appendLog("[UPLOAD] [水鱼] 上传 $label 成功 状态: 200");
+              appendLog("[SYSTEM] 传分业务完毕");
+            } else {
+              final label = (diff == 10) ? "U·TA·GE" : "难度$diff";
+              appendLog(
+                "[ERROR] [水鱼] 上传 $label 失败: ${response?['message'] ?? '未知错误'}",
+              );
+            }
+          }
+        }
+      } catch (e) {
+        appendLog("[ERROR] 手机侧解析/上传异常: $e");
+      }
+      return;
+    }
+
     // 同时输出到 IDE 调试控制台，响应“控制台内部 print”要求
     print(msg);
     _gameLogs[_trackingGameType!] =
