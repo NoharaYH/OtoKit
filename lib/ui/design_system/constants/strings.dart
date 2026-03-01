@@ -51,7 +51,7 @@ class UiStrings {
   static const String logClipReady = "链接已复制，请前往微信打开";
   static const String logWaitLink = "正在等待链接响应...";
 
-  static const String logAuthStart = "发起微信登录授权...";
+  static const String logAuthStart = "正在发起授权...";
   static const String logAuthRedirecting = "已获取授权，正在重定向...";
   static const String logAuthRedirected = "重定向完成，正在获取数据...";
 

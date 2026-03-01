@@ -23,6 +23,7 @@ class UiColors {
   static const Color success = Color(0xFF00C853);
   static const Color warning = Color(0xFFFFC107);
   static const Color error = Color(0xFFFF1744);
+  static const Color info = Color(0xFF00B0FF); // 青蓝色，用于系统/信息日志
 
   // 统一交互面具色
   static const Color disabledMask = Color(0x99000000); // 60% 黑色遮罩

@@ -391,11 +391,14 @@ class _SyncLogPanelState extends State<SyncLogPanel>
                       child: Container(
                         width: double.infinity,
                         alignment: Alignment.topLeft,
-                        child: Text(
+                        child: Text.rich(
                           _displayedLines.isEmpty
-                              ? UiStrings.waitingLogs
-                              : _displayedLines.join('\n'),
-                          // Style is now handled by AnimatedDefaultTextStyle
+                              ? const TextSpan(text: UiStrings.waitingLogs)
+                              : TextSpan(
+                                  children: _displayedLines
+                                      .map(_buildLineSpan)
+                                      .toList(),
+                                ),
                         ),
                       ),
                     ),
@@ -405,6 +408,51 @@ class _SyncLogPanelState extends State<SyncLogPanel>
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  TextSpan _buildLineSpan(String line) {
+    // 匹配起始的 [TAG] 以及其后的平台名称（如果有）
+    final match = RegExp(
+      r'^(\[.*?\])\s*(?:\[(.*?)\]\s*)?(.*)$',
+    ).firstMatch(line);
+    if (match == null) return TextSpan(text: '$line\n');
+
+    final tag = match.group(1)!;
+    final platform = match.group(2);
+    final content = match.group(3)!;
+
+    Color tagColor = UiColors.info; // 默认：青蓝 (Info)
+
+    // 1. 处理 [TAG] 颜色
+    if (tag.contains('ERROR')) {
+      tagColor = UiColors.error; // 红
+    } else if (tag.contains('UPLOAD') ||
+        tag.contains('DOWNLOAD') || // DOWNLOAD 现在也用绿色
+        tag.contains('AUTH') ||
+        tag.contains('SUCCESS') ||
+        tag.contains('DONE')) {
+      tagColor = UiColors.success; // 绿
+    } else {
+      tagColor = UiColors.info; // 青蓝
+    }
+
+    return TextSpan(
+      children: [
+        TextSpan(
+          text: tag,
+          style: TextStyle(color: tagColor, fontWeight: FontWeight.bold),
+        ),
+        if (platform != null)
+          TextSpan(
+            text: ' $platform', // 去掉平台名称外的方括号
+            style: const TextStyle(
+              color: UiColors.warning, // 使用黄色来表示平台文字
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        TextSpan(text: ' $content\n'),
       ],
     );
   }
