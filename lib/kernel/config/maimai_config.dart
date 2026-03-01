@@ -1,7 +1,6 @@
 class MaimaiConfig {
-  static const String lxnsPathLabel = "maimai";
-  static const String lxnsUploadPath = "$lxnsPathLabel/player/html";
-  static const String lxnsPlayerPath = "$lxnsPathLabel/player";
+  static const String lxnsUploadPath = "user/maimai/player/html";
+  static const String lxnsPlayerPath = "user/maimai/player";
 
   static const String dfUploadPath =
       "maimaidxprober/player/update_records_html";

@@ -44,10 +44,8 @@ class MainActivity : FlutterActivity(),
                     DataContext.Password = call.argument<String>("password")
                     DataContext.LxnsUploadUrl = call.argument<String>("lxnsUploadUrl") ?: ""
                     DataContext.DfUploadUrl = call.argument<String>("dfUploadUrl") ?: ""
-                    DataContext.WahlapBaseUrl = call.argument<String>("wahlapBaseUrl") ?: ""
                     DataContext.WahlapAuthUrl = call.argument<String>("wahlapAuthUrl") ?: ""
                     DataContext.GameType = call.argument<Int>("gameType") ?: 0
-                    DataContext.IsOAuth = call.argument<Boolean>("isLxnsOAuth") ?: false
                     val diffs = call.argument<List<Int>>("difficulties")
                     if (diffs != null) {
                         DataContext.Difficulties = diffs
@@ -57,6 +55,17 @@ class MainActivity : FlutterActivity(),
                     val genres = call.argument<List<String>>("genreList")
                     if (genres != null) {
                         DataContext.GenreList = genres
+                    }
+                    val fetchUrls = call.argument<Map<*, *>>("fetchUrlMap")
+                    if (fetchUrls != null) {
+                        DataContext.FetchUrlMap.clear()
+                        fetchUrls.forEach { (k, v) ->
+                            if (k is Int && v is String) {
+                                DataContext.FetchUrlMap[k] = v
+                            } else if (k is Long && v is String) {
+                                DataContext.FetchUrlMap[k.toInt()] = v
+                            }
+                        }
                     }
 
                     startService(Intent(this, LocalVpnService::class.java))

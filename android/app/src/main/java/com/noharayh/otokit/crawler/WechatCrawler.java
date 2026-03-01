@@ -59,6 +59,7 @@ public class WechatCrawler {
     private static OkHttpClient client;
     private static final SimpleCookieJar jar = new SimpleCookieJar();
     private static final Map<Integer, String> diffMap = new HashMap<>();
+    private static final Map<Integer, String> htmlCache = new HashMap<>();
 
     public WechatCrawler() {
         diffMap.put(-1, "用户信息");
@@ -154,111 +155,75 @@ public class WechatCrawler {
 
 
     private static void fetchAndUploadData(String username, String password, Set<Integer> difficulties) {
-        writeLog("[SYSTEM] 开始流式同步成绩 (按分类拆分)");
+        htmlCache.clear();
+        writeLog("[SYSTEM] 开始获取用户成绩");
 
-        // 1. 基础信息抓取与同步 (Lxns 强制要求玩家档案确立)
-        String userHtml = fetchHtml(-1, null);
-        if (userHtml != null) {
-            if (password != null && !password.isEmpty()) {
-                uploadToLxns(-1, userHtml, password);
-            }
-            sleep(1000);
-        }
-
-        String recentHtml = fetchHtml(-2, null);
-        if (recentHtml != null) {
-            if (password != null && !password.isEmpty()) {
-                uploadToLxns(-2, recentHtml, password);
-            }
-            sleep(1000);
-        }
-
-        // 2. 嵌套迭代：难度 -> 分类
-        java.util.List<String> genres = com.noharayh.otokit.DataContext.GenreList;
+        // 基础信息抓取 (Lxns 强制要求玩家档案确立)
+        fetchSingleHtmlToCache(-1);
+        sleep(1000);
+        fetchSingleHtmlToCache(-2);
+        sleep(1000);
 
         for (Integer diff : difficulties) {
             if (CrawlerCaller.isStopped) {
                 writeLog("[SYSTEM] 同步业务终止");
                 return;
             }
-
-            // 特殊情况：宴谱 (10)、中二节奏、或未下发分类列表时，执行全量同步
-            // 注意：中二节奏由 URL 难度参数天然分流，无需二级分类
-            if (diff == 10 || com.noharayh.otokit.DataContext.GameType == 1 || genres == null || genres.isEmpty()) {
-                syncSingleSegment(diff, null, username, password);
-                sleep(1200);
-            } else {
-                // 舞萌 DX 常规难度：遍历各分类进行细分抓取
-                for (String genreId : genres) {
-                    if (CrawlerCaller.isStopped) return;
-                    syncSingleSegment(diff, genreId, username, password);
-                    sleep(1200); // 频率保护
-                }
-            }
+            fetchSingleHtmlToCache(diff);
+            sleep(1200);
         }
 
-        writeLog("[SYSTEM] 流式同步任务执行完毕");
-    }
-
-    /** 同步单个数据片段 (Fetch -> Upload -> Free) */
-    private static void syncSingleSegment(int diff, String genreId, String dfToken, String lxnsToken) {
-        String label = getDiffLabel(diff);
-        String logLabel = label + (genreId != null ? " [分类 " + genreId + "]" : "");
-        
-        writeLog("[DOWNLOAD] 正在抓取 " + logLabel);
-        String html = fetchHtml(diff, genreId);
-        
-        if (html == null || html.length() < 500) {
-            writeLog("[WARN] " + logLabel + " 数据抓取为空或过短，跳过同步");
+        if (htmlCache.isEmpty()) {
+            writeLog("[ERROR] 获取成绩失败: {异常 未获取到有效 HTML 数据，取消上传}");
             return;
         }
 
-        // 流式上传：不进入 htmlCache，直接发送
-        if (dfToken != null && !dfToken.isEmpty()) {
-            uploadToDivingFish(diff, html, dfToken);
-        }
-        if (lxnsToken != null && !lxnsToken.isEmpty()) {
-            uploadToLxns(diff, html, lxnsToken);
+        writeLog("[SYSTEM] 成绩获取完毕，开始上传至目标平台...");
+
+        if (username != null && !username.isEmpty()) {
+            writeLog("[SYSTEM] 开始上传至水鱼服务器");
+            for (Map.Entry<Integer, String> entry : htmlCache.entrySet()) {
+                if (CrawlerCaller.isStopped) return;
+                if (entry.getKey() < 0) continue;
+                uploadToDivingFish(entry.getKey(), entry.getValue(), username);
+            }
         }
 
-        // 显式内存释放
-        html = null;
-        System.gc();
+        if (password != null && !password.isEmpty()) {
+            writeLog("[SYSTEM] 开始上传至落雪服务器");
+            if (htmlCache.containsKey(-1)) {
+                uploadToLxns(-1, htmlCache.get(-1), password);
+                sleep(1000);
+            }
+
+            for (Map.Entry<Integer, String> entry : htmlCache.entrySet()) {
+                if (CrawlerCaller.isStopped) return;
+                if (entry.getKey() < 0) continue;
+                sleep(1000);
+                uploadToLxns(entry.getKey(), entry.getValue(), password);
+            }
+        }
+
+        writeLog("[SYSTEM] 同步任务执行完毕");
     }
 
-    private static String fetchHtml(int diff, String genreId) {
-        if (CrawlerCaller.isStopped) return null;
+    private static void fetchSingleHtmlToCache(Integer diff) {
+        if (CrawlerCaller.isStopped) return;
 
-        String baseUrl = com.noharayh.otokit.DataContext.WahlapBaseUrl;
-        if (baseUrl == null || baseUrl.isEmpty()) return null;
-
-        String url;
-        if (com.noharayh.otokit.DataContext.GameType == 0) {
-            // 舞萌 DX 抓取逻辑
-            if (diff == -1) url = baseUrl + "friend/userFriendCode/";
-            else if (diff == -2) url = baseUrl + "record/";
-            else if (diff == 10) url = baseUrl + "record/musicGenre/search/?genre=99&diff=10";
-            else {
-                // 判别：是按分类拆分还是全量搜索
-                if (genreId != null && !genreId.isEmpty()) {
-                    url = baseUrl + "record/musicGenre/search/?genre=" + genreId + "&diff=" + diff;
-                } else {
-                    url = baseUrl + "record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
-                }
-            }
-        } else {
-            // 中二节奏 抓取逻辑
-            if (diff == -1) url = baseUrl + "home/playerData";
-            else if (diff == -2) url = baseUrl + "record/playlog";
-            else if (diff == 5 || diff == 10) url = baseUrl + "record/worldsEndList";
-            else url = baseUrl + "record/musicGenre?difficulty=" + diff;
+        String url = com.noharayh.otokit.DataContext.FetchUrlMap.get(diff);
+        if (url == null || url.isEmpty()) {
+            writeLog("[ERROR] 获取失败: {异常 难度 " + diff + " 未配置爬取路径}");
+            return;
         }
 
+        String label = getDiffLabel(diff);
         Request request = new Request.Builder().url(url).build();
         try (Response response = client.newCall(request).execute()) {
-            return Objects.requireNonNull(response.body()).string();
+            String html = Objects.requireNonNull(response.body()).string();
+            htmlCache.put(diff, html);
+            writeLog("[DOWNLOAD] 已获取 " + label + " 数据");
         } catch (Exception e) {
-            return null;
+            writeLog("[ERROR] 获取 " + label + " 失败: {异常 " + e.getMessage() + "}");
         }
     }
 
@@ -312,9 +277,9 @@ public class WechatCrawler {
             return;
         }
 
-        // Fetch maimai data
+        // Fetch data
         try {
-            this.fetchMaimaiData(username, password, difficulties);
+            this.fetchGameData(username, password, difficulties);
             finishUpdate();
         } catch (Exception error) {
             writeLog("[ERROR] 网络错误，传分业务终止");
@@ -378,7 +343,7 @@ public class WechatCrawler {
         }
     }
 
-    private void fetchMaimaiData(String username, String password, Set<Integer> difficulties) throws IOException {
+    private void fetchGameData(String username, String password, Set<Integer> difficulties) throws IOException {
         this.buildHttpClient(false);
         fetchAndUploadData(username, password, difficulties);
     }

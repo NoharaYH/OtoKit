@@ -28,19 +28,17 @@ class TransferProvider extends ChangeNotifier {
 
   // 数据状态
   String dfToken = '';
-  String lxnsToken = ''; // 当前游戏类型的 LXNS Token
-  // 按游戏隔离存储：0 = maimai, 1 = chunithm
-  final Map<int, String> _lxnsTokens = {};
-  final Map<int, String?> _lxnsRefreshTokens = {};
-  final Map<int, bool> _isLxnsOAuthDoneMap = {};
-  String? get lxnsRefreshToken => _lxnsRefreshTokens[_trackingGameType ?? 0];
+  // 统一身份凭证：落雪 (LXNS) 账号全局唯一，不再按游戏隔离
+  String lxnsToken = '';
+  String? lxnsRefreshToken;
+  bool _isLxnsOAuthDone = false;
   String? _pkceVerifier; // PKCE 原始校验码
 
   // UI 状态
   bool _isLoading = false;
   bool _isStorageLoaded = false;
   final Map<int, bool> _isDivingFishVerifiedMap = {};
-  final Map<int, bool> _isLxnsVerifiedMap = {};
+  bool _isLxnsVerified = false;
   bool _isVpnRunning = false;
   bool _isTracking = false;
   bool _pendingWechat = false; // 等 VPN 真正启动后再跳微信
@@ -58,7 +56,7 @@ class TransferProvider extends ChangeNotifier {
   bool get isStorageLoaded => _isStorageLoaded;
   bool get isDivingFishVerified =>
       _isDivingFishVerifiedMap[_activeGameType] ?? false;
-  bool get isLxnsVerified => _isLxnsVerifiedMap[_activeGameType] ?? false;
+  bool get isLxnsVerified => _isLxnsVerified;
   bool get isVpnRunning => _isVpnRunning;
   bool get isTracking => _isTracking;
   int? get trackingGameType => _trackingGameType;
@@ -66,20 +64,18 @@ class TransferProvider extends ChangeNotifier {
   String? get successMessage => _successMessage;
   String get vpnLog => _gameLogs[_trackingGameType] ?? "";
   String getVpnLog(int gameType) => _gameLogs[gameType] ?? "";
-  bool get isLxnsOAuthDone => _isLxnsOAuthDoneMap[_activeGameType] ?? false;
+  bool get isLxnsOAuthDone => _isLxnsOAuthDone;
 
   bool isDivingFishVerifiedFor(int gameType) =>
       _isDivingFishVerifiedMap[gameType] ?? false;
-  bool isLxnsVerifiedFor(int gameType) => _isLxnsVerifiedMap[gameType] ?? false;
-  bool isLxnsOAuthDoneFor(int gameType) =>
-      _isLxnsOAuthDoneMap[gameType] ?? false;
-  String lxnsTokenFor(int gameType) => _lxnsTokens[gameType] ?? '';
+  bool isLxnsVerifiedFor(int gameType) => _isLxnsVerified;
+  bool isLxnsOAuthDoneFor(int gameType) => _isLxnsOAuthDone;
+  String lxnsTokenFor(int gameType) => lxnsToken;
 
   // 当前选中的游戏类型（表单页中接收）
   int _activeGameType = 0;
   void setActiveGameType(int gameType) {
     _activeGameType = gameType;
-    lxnsToken = _lxnsTokens[gameType] ?? '';
     notifyListeners();
   }
 
@@ -210,26 +206,24 @@ class TransferProvider extends ChangeNotifier {
       if (result != null) {
         final accessToken = result['access_token'] as String;
         final refreshToken = result['refresh_token'] as String?;
-        final gt = gameType;
 
-        // 按游戏类型隔离存储凭证
-        _lxnsTokens[gt] = accessToken;
-        _lxnsRefreshTokens[gt] = refreshToken;
-        _isLxnsOAuthDoneMap[gt] = true;
-        _isLxnsVerifiedMap[gt] = true;
-
-        // 如果当前正在该游戏的同步页面，则更新公开字段
-        if (_activeGameType == gt) {
-          lxnsToken = accessToken;
-        }
+        lxnsToken = accessToken;
+        lxnsRefreshToken = refreshToken;
+        _isLxnsOAuthDone = true;
+        _isLxnsVerified = true;
 
         _pkceVerifier = null;
 
-        final tokenKey = '${StorageService.kLxnsTokenPrefix}$gt';
-        final refreshKey = '${StorageService.kLxnsRefreshTokenPrefix}$gt';
-        await _storageService.save(tokenKey, accessToken);
+        // 保存全局凭证（不再携带游戏类型后缀，或者统一使用主游戏 key）
+        await _storageService.save(
+          StorageService.kLxnsTokenPrefix,
+          accessToken,
+        );
         if (refreshToken != null) {
-          await _storageService.save(refreshKey, refreshToken);
+          await _storageService.save(
+            StorageService.kLxnsRefreshTokenPrefix,
+            refreshToken,
+          );
         }
         _successMessage = UiStrings.oauthSuccess;
       } else {
@@ -365,9 +359,7 @@ class TransferProvider extends ChangeNotifier {
     if (ok == true) {
       // 根据 mode 决定下发的 Token
       final finalDfToken = (mode == 0 || mode == 1) ? dfToken : "";
-      final finalLxnsToken = (mode == 2 || mode == 1)
-          ? (_lxnsTokens[_trackingGameType ?? 0] ?? "")
-          : "";
+      final finalLxnsToken = (mode == 2 || mode == 1) ? lxnsToken : "";
 
       // 动态拼装落雪上传地址
       final String lxnsUploadPath = (_trackingGameType == 1)
@@ -392,6 +384,33 @@ class TransferProvider extends ChangeNotifier {
       final String fullWahlapAuthUrl =
           "${Endpoints.wahlapAuthBaseUrl}$wahlapAuthLabel";
 
+      // 构造爬取 URL 字典
+      final Map<int, String> fetchUrlMap = {};
+      if (_trackingGameType == 0) {
+        // Maimai
+        fetchUrlMap[-1] = "${wahlapBaseUrl}friend/userFriendCode/";
+        fetchUrlMap[-2] = "${wahlapBaseUrl}record/";
+        fetchUrlMap[10] =
+            "${wahlapBaseUrl}record/musicGenre/search/?genre=99&diff=10";
+        for (var d in _currentDifficulties) {
+          if (d >= 0 && d != 10) {
+            fetchUrlMap[d] =
+                "${wahlapBaseUrl}record/musicSort/search/?search=V&sort=1&playCheck=on&diff=$d";
+          }
+        }
+      } else {
+        // Chunithm
+        fetchUrlMap[-1] = "${wahlapBaseUrl}home/playerData";
+        fetchUrlMap[-2] = "${wahlapBaseUrl}record/playlog";
+        fetchUrlMap[5] = "${wahlapBaseUrl}record/worldsEndList";
+        fetchUrlMap[10] = "${wahlapBaseUrl}record/worldsEndList";
+        for (var d in _currentDifficulties) {
+          if (d >= 0 && d < 5) {
+            fetchUrlMap[d] = "${wahlapBaseUrl}record/musicGenre?difficulty=$d";
+          }
+        }
+      }
+
       // 乐曲分类列表 (仅舞萌需要)
       final List<String> genreList = (_trackingGameType == 1)
           ? ChunithmConfig.genreList
@@ -406,6 +425,7 @@ class TransferProvider extends ChangeNotifier {
         'wahlapBaseUrl': wahlapBaseUrl,
         'wahlapAuthUrl': fullWahlapAuthUrl,
         'genreList': genreList,
+        'fetchUrlMap': fetchUrlMap,
         'gameType': _trackingGameType,
         'difficulties': _currentDifficulties.toList(),
       });
@@ -513,84 +533,73 @@ class TransferProvider extends ChangeNotifier {
       }
     }
 
-    // 按游戏隔离加载 LXNS Token
-    for (final gt in [0, 1]) {
-      final tokenKey = '${StorageService.kLxnsTokenPrefix}$gt';
-      final refreshKey = '${StorageService.kLxnsRefreshTokenPrefix}$gt';
-      final lxns = await _storageService.read(tokenKey);
-      final refresh = await _storageService.read(refreshKey);
+    // 加载全局唯一 LXNS Token
+    final lxns = await _storageService.read(StorageService.kLxnsTokenPrefix);
+    final refresh = await _storageService.read(
+      StorageService.kLxnsRefreshTokenPrefix,
+    );
 
-      if (lxns != null && lxns.isNotEmpty) {
-        _lxnsTokens[gt] = lxns;
-        _isLxnsVerifiedMap[gt] = true;
-      }
-      if (refresh != null && refresh.isNotEmpty) {
-        _lxnsRefreshTokens[gt] = refresh;
-      }
+    if (lxns != null && lxns.isNotEmpty) {
+      lxnsToken = lxns;
+      _isLxnsVerified = true;
+    }
+    if (refresh != null && refresh.isNotEmpty) {
+      lxnsRefreshToken = refresh;
+    }
 
-      // access_token 寿命 15 分钟，启动时若有 refresh_token 则静默续期
-      final refreshToken = _lxnsRefreshTokens[gt];
-      if (refreshToken != null && refreshToken.isNotEmpty) {
-        try {
-          final refreshed = await _apiService.refreshLxnsToken(
-            refreshToken,
-            Env.lxnsClientId,
-            Env.lxnsClientSecret,
+    // Access Token 寿命 15 分钟，启动时若有 refresh_token 则静默续期
+    if (lxnsRefreshToken != null && lxnsRefreshToken!.isNotEmpty) {
+      try {
+        final refreshed = await _apiService.refreshLxnsToken(
+          lxnsRefreshToken!,
+          Env.lxnsClientId,
+          Env.lxnsClientSecret,
+        );
+        if (refreshed != null) {
+          lxnsToken = refreshed['access_token'] ?? lxnsToken;
+          lxnsRefreshToken = refreshed['refresh_token'] ?? lxnsRefreshToken;
+          _isLxnsVerified = true;
+          _isLxnsOAuthDone = true;
+          await _storageService.save(
+            StorageService.kLxnsTokenPrefix,
+            lxnsToken,
           );
-          if (refreshed != null) {
-            final newAccess = refreshed['access_token'] ?? _lxnsTokens[gt];
-            final newRefresh = refreshed['refresh_token'] ?? refreshToken;
-            _lxnsTokens[gt] = newAccess;
-            _lxnsRefreshTokens[gt] = newRefresh;
-            _isLxnsVerifiedMap[gt] = true;
-            _isLxnsOAuthDoneMap[gt] = true;
-            await _storageService.save(
-              '${StorageService.kLxnsTokenPrefix}$gt',
-              newAccess,
-            );
-            await _storageService.save(
-              '${StorageService.kLxnsRefreshTokenPrefix}$gt',
-              newRefresh,
-            );
-          }
-        } catch (_) {
-          // 静默失败：保留上次 token，由实际传分时暴露错误
+          await _storageService.save(
+            StorageService.kLxnsRefreshTokenPrefix,
+            lxnsRefreshToken!,
+          );
         }
+      } catch (_) {
+        // 静默失败
       }
     }
 
     // 将当前激活游戏的 token 同步到公开字段
-    lxnsToken = _lxnsTokens[_activeGameType] ?? '';
     _isStorageLoaded = true;
     notifyListeners();
   }
 
   void resetVerification({int? gameType, bool df = false, bool lxns = false}) {
-    final targetGt = gameType ?? _activeGameType;
-    if (df) _isDivingFishVerifiedMap[targetGt] = false;
-    if (lxns) _isLxnsVerifiedMap[targetGt] = false;
+    if (df) _isDivingFishVerifiedMap[gameType ?? _activeGameType] = false;
+    if (lxns) _isLxnsVerified = false;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
   }
 
   void updateTokens({int? gameType, String? df, String? lxns}) {
-    final targetGt = gameType ?? _activeGameType;
     if (df != null) {
       dfToken = df;
-      // 水鱼 Token 全局同步，但需要重置所有游戏的验证状态
       for (final gt in [0, 1]) {
         _isDivingFishVerifiedMap[gt] = false;
       }
     }
     if (lxns != null) {
-      _lxnsTokens[targetGt] = lxns;
-      _isLxnsVerifiedMap[targetGt] = false;
-      // 不要设置 OAuthDone 位，因为手动输入的可能是个人 API Key
-      _isLxnsOAuthDoneMap[targetGt] = false;
+      lxnsToken = lxns;
+      _isLxnsVerified = false;
+      _isLxnsOAuthDone = false;
 
-      // 关键：同步保存到存储
-      _storageService.save('${StorageService.kLxnsTokenPrefix}$targetGt', lxns);
+      _storageService.save(StorageService.kLxnsTokenPrefix, lxns);
     }
     notifyListeners();
   }
@@ -611,8 +620,7 @@ class TransferProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    final currentLxnsToken = _lxnsTokens[gameType] ?? "";
-    if (needsLxns && currentLxnsToken.isEmpty) {
+    if (needsLxns && lxnsToken.isEmpty) {
       _errorMessage = UiStrings.inputLxnsToken;
       _isLoading = false;
       notifyListeners();
@@ -621,7 +629,7 @@ class TransferProvider extends ChangeNotifier {
 
     try {
       bool dfSuccess = _isDivingFishVerifiedMap[gameType] ?? false;
-      bool lxnsSuccess = _isLxnsVerifiedMap[gameType] ?? false;
+      bool lxnsSuccess = _isLxnsVerified;
 
       if (needsDf && !dfSuccess) {
         dfSuccess = await _apiService.validateDivingFishToken(dfToken);
@@ -635,7 +643,7 @@ class TransferProvider extends ChangeNotifier {
       }
       if (needsLxns && !lxnsSuccess) {
         lxnsSuccess = await _apiService.validateLxnsToken(
-          currentLxnsToken,
+          lxnsToken,
           gameType: gameType,
         );
         if (!lxnsSuccess) {
@@ -647,17 +655,13 @@ class TransferProvider extends ChangeNotifier {
       }
 
       _isDivingFishVerifiedMap[gameType] = dfSuccess;
-      _isLxnsVerifiedMap[gameType] = lxnsSuccess;
+      _isLxnsVerified = lxnsSuccess;
 
       if (dfSuccess) {
         await _storageService.save(StorageService.kDivingFishToken, dfToken);
       }
       if (lxnsSuccess) {
-        _lxnsTokens[gameType] = currentLxnsToken;
-        await _storageService.save(
-          '${StorageService.kLxnsTokenPrefix}$gameType',
-          currentLxnsToken,
-        );
+        await _storageService.save(StorageService.kLxnsTokenPrefix, lxnsToken);
       }
 
       _successMessage = UiStrings.verifySuccess;

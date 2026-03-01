@@ -1,7 +1,6 @@
 class ChunithmConfig {
-  static const String lxnsPathLabel = "chunithm";
-  static const String lxnsUploadPath = "$lxnsPathLabel/player/html";
-  static const String lxnsPlayerPath = "$lxnsPathLabel/player";
+  static const String lxnsUploadPath = "user/chunithm/player/html";
+  static const String lxnsPlayerPath = "user/chunithm/player";
 
   static const String dfUploadPath =
       "chunithmprober/player/update_records_html";

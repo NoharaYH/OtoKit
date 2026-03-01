@@ -23,11 +23,10 @@ public class DataContext {
     public static boolean CompatibleMode = false;
 
     public static int GameType = 0; // 0: maimai, 1: chunithm
-    public static boolean IsOAuth = false;
     public static String LxnsUploadUrl = "";
     public static String DfUploadUrl = "";
-    public static String WahlapBaseUrl = "";
     public static String WahlapAuthUrl = "";
     public static List<Integer> Difficulties = new ArrayList<>();
     public static List<String> GenreList = new ArrayList<>();
+    public static java.util.Map<Integer, String> FetchUrlMap = new java.util.HashMap<>();
 }
