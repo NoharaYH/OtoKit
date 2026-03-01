@@ -1,5 +1,8 @@
 package com.noharayh.otokit;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DataContext {
     public static String Username = null;
 
@@ -21,6 +24,10 @@ public class DataContext {
 
     public static int GameType = 0; // 0: maimai, 1: chunithm
     public static boolean IsOAuth = false;
-    public static java.util.List<Integer> Difficulties = new java.util.ArrayList<>();
+    public static String LxnsUploadUrl = "";
+    public static String DfUploadUrl = "";
+    public static String WahlapBaseUrl = "";
+    public static String WahlapAuthUrl = "";
+    public static List<Integer> Difficulties = new ArrayList<>();
+    public static List<String> GenreList = new ArrayList<>();
 }
-

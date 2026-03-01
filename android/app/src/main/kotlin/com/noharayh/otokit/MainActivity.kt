@@ -25,6 +25,10 @@ class MainActivity : FlutterActivity(),
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
         methodChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
+                "notifyDivingFishTaskDone" -> {
+                    CrawlerCaller.notifyDivingFishTaskDone()
+                    result.success(null)
+                }
                 "prepareVpn" -> {
                     val intent = VpnService.prepare(this)
                     if (intent != null) {
@@ -38,6 +42,10 @@ class MainActivity : FlutterActivity(),
                     CrawlerCaller.isStopped = false
                     DataContext.Username = call.argument<String>("username")
                     DataContext.Password = call.argument<String>("password")
+                    DataContext.LxnsUploadUrl = call.argument<String>("lxnsUploadUrl") ?: ""
+                    DataContext.DfUploadUrl = call.argument<String>("dfUploadUrl") ?: ""
+                    DataContext.WahlapBaseUrl = call.argument<String>("wahlapBaseUrl") ?: ""
+                    DataContext.WahlapAuthUrl = call.argument<String>("wahlapAuthUrl") ?: ""
                     DataContext.GameType = call.argument<Int>("gameType") ?: 0
                     DataContext.IsOAuth = call.argument<Boolean>("isLxnsOAuth") ?: false
                     val diffs = call.argument<List<Int>>("difficulties")
@@ -45,6 +53,10 @@ class MainActivity : FlutterActivity(),
                         DataContext.Difficulties = diffs
                     } else {
                         DataContext.Difficulties = listOf(0, 1, 2, 3, 4, 10)
+                    }
+                    val genres = call.argument<List<String>>("genreList")
+                    if (genres != null) {
+                        DataContext.GenreList = genres
                     }
 
                     startService(Intent(this, LocalVpnService::class.java))
@@ -105,7 +117,7 @@ class MainActivity : FlutterActivity(),
 
     override fun onStartAuth() {
         runOnUiThread {
-            methodChannel?.invokeMethod("onLogReceived", "[AUTH] 正在进行微信授权...")
+            methodChannel?.invokeMethod("onLogReceived", "[AUTH] 正在发起授权...")
         }
     }
 

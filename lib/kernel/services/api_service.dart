@@ -1,5 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
+import '../config/endpoints.dart';
+import '../config/system_config.dart';
+import '../config/maimai_config.dart';
+import '../config/chunithm_config.dart';
 
 @lazySingleton
 class ApiService {
@@ -11,7 +15,7 @@ class ApiService {
   Future<bool> validateDivingFishToken(String token) async {
     try {
       final response = await _dio.get(
-        "https://www.diving-fish.com/api/maimaidxprober/player/records",
+        Endpoints.dfMaimaiRecords,
         options: Options(
           headers: {"Import-Token": token},
           receiveTimeout: const Duration(seconds: 10),
@@ -26,9 +30,11 @@ class ApiService {
   // Validate LXNS Token (Read-Only)
   Future<bool> validateLxnsToken(String token, {int gameType = 0}) async {
     try {
-      final String game = gameType == 0 ? "maimai" : "chunithm";
+      final String playerPath = gameType == 0
+          ? MaimaiConfig.lxnsPlayerPath
+          : ChunithmConfig.lxnsPlayerPath;
       final response = await _dio.get(
-        "https://maimai.lxns.net/api/v0/user/$game/player",
+        "${Endpoints.lxnsBaseUrl}/$playerPath",
         options: Options(
           headers: {"Authorization": "Bearer $token"},
           receiveTimeout: const Duration(seconds: 10),
@@ -53,13 +59,13 @@ class ApiService {
   ) async {
     try {
       final response = await _dio.post(
-        "https://maimai.lxns.net/api/v0/oauth/token",
+        Endpoints.lxnsTokenExchange,
         data: {
           "grant_type": "authorization_code",
           "client_id": clientId,
           "code": code,
           "code_verifier": codeVerifier,
-          "redirect_uri": "http://127.0.0.1:34125/oauth/callback",
+          "redirect_uri": SystemConfig.oauthRedirectUri,
         },
       );
       if (response.statusCode == 200) {
@@ -82,7 +88,7 @@ class ApiService {
   ) async {
     try {
       final response = await _dio.post(
-        "https://maimai.lxns.net/api/v0/oauth/token",
+        Endpoints.lxnsTokenExchange,
         data: {
           "grant_type": "refresh_token",
           "client_id": clientId,
@@ -109,7 +115,7 @@ class ApiService {
   ) async {
     try {
       final response = await _dio.post(
-        "https://www.diving-fish.com/api/maimaidxprober/player/update_records",
+        Endpoints.dfMaimaiUpload,
         data: records,
         options: Options(
           headers: {"Import-Token": token},
