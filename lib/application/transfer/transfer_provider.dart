@@ -9,9 +9,13 @@ import 'package:injectable/injectable.dart';
 import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../kernel/config/env.dart';
+import '../../kernel/config/endpoints.dart';
+import '../../kernel/config/system_config.dart';
 import '../../kernel/services/storage_service.dart';
 import '../../kernel/services/api_service.dart';
 import '../../kernel/services/maimai_html_parser.dart';
+import '../../kernel/config/maimai_config.dart';
+import '../../kernel/config/chunithm_config.dart';
 import '../../ui/design_system/constants/strings.dart';
 
 /// TransferProvider：纯 UI 状态中转层。
@@ -41,14 +45,13 @@ class TransferProvider extends ChangeNotifier {
   bool _isTracking = false;
   bool _pendingWechat = false; // 等 VPN 真正启动后再跳微信
   int? _trackingGameType;
-  int _oauthTargetGameType = 0; // 记录本次 OAuth 的目标游戏类型
   int _lastMode = 0; // 记录最近一次启动模式，供权限回调恢复使用
   Set<int> _currentDifficulties = {0, 1, 2, 3, 4, 5};
   String? _errorMessage;
   String? _successMessage;
   final Map<int, String> _gameLogs = {};
 
-  static const _channel = MethodChannel('com.noharayh.otokit/vpn');
+  static const _channel = MethodChannel(SystemConfig.vpnChannelName);
 
   // Getters (Legacy - primarily for back-compat or active tab)
   bool get isLoading => _isLoading;
@@ -93,14 +96,19 @@ class TransferProvider extends ChangeNotifier {
       debugPrint('[DEEPLINK] Incoming: $uri');
       // 统一入口: /oauth/callback
       if ((uri.scheme == 'https' || uri.scheme == 'otokit') &&
-          uri.host == 'app.otokit.com' &&
-          uri.path == '/oauth/callback') {
+          uri.host == SystemConfig.oauthDeepLinkHost &&
+          uri.path == SystemConfig.oauthCallbackPath) {
         final state = uri.queryParameters['state'];
         final code = uri.queryParameters['code'];
 
         // 逻辑分发：识别 tenant=lxns
-        if (state != null && state.contains('lxns') && code != null) {
-          await _handleLxnsOAuth(code);
+        if (state != null && code != null) {
+          final decoded = utf8.decode(base64Url.decode(state));
+          if (decoded.contains('tenant=lxns')) {
+            int gt = 0;
+            if (decoded.contains('gameType=1')) gt = 1;
+            await _handleLxnsOAuth(code, gameType: gt);
+          }
         }
       }
     });
@@ -109,20 +117,20 @@ class TransferProvider extends ChangeNotifier {
   /// 发起落雪 OAuth 授权流程 (PKCE)
   /// [gameType]: 0 = maimai, 1 = chunithm
   Future<void> startLxnsOAuthFlow({int gameType = 0}) async {
-    _oauthTargetGameType = gameType;
     _pkceVerifier = _generateRandomString(128);
     final challenge = _computeChallenge(_pkceVerifier!);
 
     final state = base64Url.encode(
-      utf8.encode("tenant=lxns&nonce=${_generateRandomString(8)}"),
+      utf8.encode(
+        "tenant=lxns&gameType=$gameType&nonce=${_generateRandomString(8)}",
+      ),
     );
 
     // 统一 OAuth Scope：LXNS 采用通用权限标识，涵盖所有关联游戏
-    const String scope =
-        "read_user_profile+read_player+write_player+read_user_token";
+    const String scope = SystemConfig.oauthScope;
 
-    const int oauthPort = 34125;
-    final String redirectUri = "http://127.0.0.1:$oauthPort/oauth/callback";
+    const int oauthPort = SystemConfig.oauthPort;
+    const String redirectUri = SystemConfig.oauthRedirectUri;
 
     try {
       final server = await HttpServer.bind(
@@ -131,19 +139,25 @@ class TransferProvider extends ChangeNotifier {
         shared: true,
       );
       server.listen((HttpRequest request) async {
-        if (request.uri.path == '/oauth/callback') {
+        if (request.uri.path == SystemConfig.oauthCallbackPath) {
           final code = request.uri.queryParameters['code'];
+          final stateParam = request.uri.queryParameters['state'];
           request.response
             ..statusCode = 200
             ..headers.contentType = ContentType.html
             ..write(
-              '<meta charset="utf-8"><body><h2 style="text-align:center;margin-top:50px;">授权成功！您可以关闭此网页并返回 OtoKit。</h2></body>',
+              '<meta charset="utf-8"><body><h2 style="text-align:center;margin-top:50px;">${UiStrings.oauthSuccess}！您可以关闭此网页并返回 ${UiStrings.appName}。</h2></body>',
             );
           await request.response.close();
           await server.close(force: true);
 
           if (code != null) {
-            _handleLxnsOAuth(code);
+            int gt = 0;
+            if (stateParam != null) {
+              final decoded = utf8.decode(base64Url.decode(stateParam));
+              if (decoded.contains('gameType=1')) gt = 1;
+            }
+            await _handleLxnsOAuth(code, gameType: gt);
           }
         }
       });
@@ -156,14 +170,14 @@ class TransferProvider extends ChangeNotifier {
     }
 
     final url = Uri.parse(
-      "https://maimai.lxns.net/oauth/authorize"
-      "?client_id=${Env.lxnsClientId}"
-      "&redirect_uri=${Uri.encodeComponent(redirectUri)}"
-      "&response_type=code"
-      "&scope=$scope"
-      "&state=$state"
-      "&code_challenge=$challenge"
-      "&code_challenge_method=S256",
+      '${Endpoints.lxnsAuthorize}'
+      '?client_id=${Env.lxnsClientId}'
+      '&redirect_uri=${Uri.encodeComponent(redirectUri)}'
+      '&response_type=code'
+      '&scope=$scope'
+      '&state=$state'
+      '&code_challenge=$challenge'
+      '&code_challenge_method=S256',
     );
 
     if (await canLaunchUrl(url)) {
@@ -174,7 +188,7 @@ class TransferProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _handleLxnsOAuth(String code) async {
+  Future<void> _handleLxnsOAuth(String code, {int gameType = 0}) async {
     if (_pkceVerifier == null) {
       _errorMessage = UiStrings.errOAuthNoVerifier;
       notifyListeners();
@@ -196,18 +210,23 @@ class TransferProvider extends ChangeNotifier {
       if (result != null) {
         final accessToken = result['access_token'] as String;
         final refreshToken = result['refresh_token'] as String?;
-        final gt = _oauthTargetGameType;
+        final gt = gameType;
 
         // 按游戏类型隔离存储凭证
         _lxnsTokens[gt] = accessToken;
         _lxnsRefreshTokens[gt] = refreshToken;
         _isLxnsOAuthDoneMap[gt] = true;
         _isLxnsVerifiedMap[gt] = true;
-        lxnsToken = accessToken; // 同步公开字段
+
+        // 如果当前正在该游戏的同步页面，则更新公开字段
+        if (_activeGameType == gt) {
+          lxnsToken = accessToken;
+        }
+
         _pkceVerifier = null;
 
-        final tokenKey = 'lxns_token_$gt';
-        final refreshKey = 'lxns_refresh_token_$gt';
+        final tokenKey = '${StorageService.kLxnsTokenPrefix}$gt';
+        final refreshKey = '${StorageService.kLxnsRefreshTokenPrefix}$gt';
         await _storageService.save(tokenKey, accessToken);
         if (refreshToken != null) {
           await _storageService.save(refreshKey, refreshToken);
@@ -264,19 +283,24 @@ class TransferProvider extends ChangeNotifier {
               records,
             );
             if (response != null && response['message'] == '更新成功') {
-              final label = (diff == 10) ? "U·TA·GE" : "难度$diff";
-              appendLog("[UPLOAD] [水鱼] 上传 $label 成功 状态: 200");
-              appendLog("[SYSTEM] 传分业务完毕");
-            } else {
-              final label = (diff == 10) ? "U·TA·GE" : "难度$diff";
+              final label = (diff == 10) ? UiStrings.diffLabelUtage : "难度$diff";
               appendLog(
-                "[ERROR] [水鱼] 上传 $label 失败: ${response?['message'] ?? '未知错误'}",
+                "${UiStrings.logTagUpload} ${UiStrings.modeDivingFish} 上传 $label 成功 状态: 200",
+              );
+              // Java 侧会负责打印最终的完毕日志，此处不再冗余重复
+            } else {
+              final label = (diff == 10) ? UiStrings.diffLabelUtage : "难度$diff";
+              appendLog(
+                "${UiStrings.logTagError} ${UiStrings.modeDivingFish} 上传 $label 失败: ${response?['message'] ?? '未知错误'}",
               );
             }
           }
+          // 重要：反馈给原生侧，解除同步锁，允许切换至落雪平台
+          await _channel.invokeMethod('notifyDivingFishTaskDone');
         }
       } catch (e) {
-        appendLog("[ERROR] 手机侧解析/上传异常: $e");
+        appendLog("${UiStrings.logTagError} 手机侧解析/上传异常: $e");
+        await _channel.invokeMethod('notifyDivingFishTaskDone');
       }
       return;
     }
@@ -345,10 +369,43 @@ class TransferProvider extends ChangeNotifier {
           ? (_lxnsTokens[_trackingGameType ?? 0] ?? "")
           : "";
 
+      // 动态拼装落雪上传地址
+      final String lxnsUploadPath = (_trackingGameType == 1)
+          ? ChunithmConfig.lxnsUploadPath
+          : MaimaiConfig.lxnsUploadPath;
+      final String fullLxnsUploadUrl =
+          "${Endpoints.lxnsBaseUrl}/$lxnsUploadPath";
+
+      // 动态拼装水鱼上传地址
+      final String dfUploadPath = (_trackingGameType == 1)
+          ? ChunithmConfig.dfUploadPath
+          : MaimaiConfig.dfUploadPath;
+      final String fullDfUploadUrl = "${Endpoints.dfBaseUrl}/$dfUploadPath";
+
+      // 动态拼装官方地址
+      final String wahlapBaseUrl = (_trackingGameType == 1)
+          ? ChunithmConfig.wahlapBase
+          : MaimaiConfig.wahlapBase;
+      final String wahlapAuthLabel = (_trackingGameType == 1)
+          ? ChunithmConfig.wahlapAuthLabel
+          : MaimaiConfig.wahlapAuthLabel;
+      final String fullWahlapAuthUrl =
+          "${Endpoints.wahlapAuthBaseUrl}$wahlapAuthLabel";
+
+      // 乐曲分类列表 (仅舞萌需要)
+      final List<String> genreList = (_trackingGameType == 1)
+          ? ChunithmConfig.genreList
+          : MaimaiConfig.genreList;
+
       // 将 Token 凭证与难度配置一同下发，供原生 DataContext 存储后使用
       await _channel.invokeMethod('startVpn', {
         'username': finalDfToken,
         'password': finalLxnsToken,
+        'lxnsUploadUrl': fullLxnsUploadUrl,
+        'dfUploadUrl': fullDfUploadUrl,
+        'wahlapBaseUrl': wahlapBaseUrl,
+        'wahlapAuthUrl': fullWahlapAuthUrl,
+        'genreList': genreList,
         'gameType': _trackingGameType,
         'difficulties': _currentDifficulties.toList(),
       });
@@ -366,7 +423,7 @@ class TransferProvider extends ChangeNotifier {
     final randomStr = DateTime.now().millisecondsSinceEpoch
         .toRadixString(36)
         .substring(0, 8);
-    final localProxyUrl = "http://127.0.0.2:8284/$randomStr";
+    final localProxyUrl = "${SystemConfig.proxyBaseUrl}/$randomStr";
     await Clipboard.setData(ClipboardData(text: localProxyUrl));
 
     final wxUrl = Uri.parse("weixin://");
@@ -458,8 +515,8 @@ class TransferProvider extends ChangeNotifier {
 
     // 按游戏隔离加载 LXNS Token
     for (final gt in [0, 1]) {
-      final tokenKey = 'lxns_token_$gt';
-      final refreshKey = 'lxns_refresh_token_$gt';
+      final tokenKey = '${StorageService.kLxnsTokenPrefix}$gt';
+      final refreshKey = '${StorageService.kLxnsRefreshTokenPrefix}$gt';
       final lxns = await _storageService.read(tokenKey);
       final refresh = await _storageService.read(refreshKey);
 
@@ -487,8 +544,14 @@ class TransferProvider extends ChangeNotifier {
             _lxnsRefreshTokens[gt] = newRefresh;
             _isLxnsVerifiedMap[gt] = true;
             _isLxnsOAuthDoneMap[gt] = true;
-            await _storageService.save('lxns_token_$gt', newAccess);
-            await _storageService.save('lxns_refresh_token_$gt', newRefresh);
+            await _storageService.save(
+              '${StorageService.kLxnsTokenPrefix}$gt',
+              newAccess,
+            );
+            await _storageService.save(
+              '${StorageService.kLxnsRefreshTokenPrefix}$gt',
+              newRefresh,
+            );
           }
         } catch (_) {
           // 静默失败：保留上次 token，由实际传分时暴露错误
@@ -525,6 +588,9 @@ class TransferProvider extends ChangeNotifier {
       _isLxnsVerifiedMap[targetGt] = false;
       // 不要设置 OAuthDone 位，因为手动输入的可能是个人 API Key
       _isLxnsOAuthDoneMap[targetGt] = false;
+
+      // 关键：同步保存到存储
+      _storageService.save('${StorageService.kLxnsTokenPrefix}$targetGt', lxns);
     }
     notifyListeners();
   }
@@ -588,7 +654,10 @@ class TransferProvider extends ChangeNotifier {
       }
       if (lxnsSuccess) {
         _lxnsTokens[gameType] = currentLxnsToken;
-        await _storageService.save('lxns_token_$gameType', currentLxnsToken);
+        await _storageService.save(
+          '${StorageService.kLxnsTokenPrefix}$gameType',
+          currentLxnsToken,
+        );
       }
 
       _successMessage = UiStrings.verifySuccess;

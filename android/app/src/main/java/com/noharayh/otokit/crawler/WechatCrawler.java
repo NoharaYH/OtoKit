@@ -59,7 +59,6 @@ public class WechatCrawler {
     private static OkHttpClient client;
     private static final SimpleCookieJar jar = new SimpleCookieJar();
     private static final Map<Integer, String> diffMap = new HashMap<>();
-    private static final Map<Integer, String> htmlCache = new HashMap<>();
 
     public WechatCrawler() {
         diffMap.put(-1, "用户信息");
@@ -94,14 +93,21 @@ public class WechatCrawler {
             data.put("token", token);
             data.put("html", htmlData);
             data.put("gameType", com.noharayh.otokit.DataContext.GameType);
+            
+            // 准备同步锁并发送日志
+            CrawlerCaller.prepareDivingFishSync();
             writeLog("[HTML_DATA_SYNC]" + new org.json.JSONObject(data).toString());
+            
+            // 等待 Flutter 侧上传完毕反馈（限时 60s）
+            if (!CrawlerCaller.waitForDivingFishSync(60000)) {
+                writeLog("[ERROR] [水鱼] 上传宴谱等待超时，任务强制继续");
+            }
             return;
         }
 
         // 常规逻辑：其余难度及游戏类型使用原始 HTML 上传方案
-        String url = (com.noharayh.otokit.DataContext.GameType == 0)
-                ? "https://www.diving-fish.com/api/maimaidxprober/player/update_records_html"
-                : "https://www.diving-fish.com/api/chunithmprober/player/update_records_html";
+        String url = com.noharayh.otokit.DataContext.DfUploadUrl;
+        if (url == null || url.isEmpty()) return;
 
         Request request = new Request.Builder()
                 .url(url)
@@ -125,8 +131,8 @@ public class WechatCrawler {
     private static void uploadToLxns(Integer diff, String htmlData, String token) {
         if (token == null || token.isEmpty()) return;
 
-        String game = (com.noharayh.otokit.DataContext.GameType == 0) ? "maimai" : "chunithm";
-        String url = "https://maimai.lxns.net/api/v0/user/" + game + "/player/html";
+        String url = com.noharayh.otokit.DataContext.LxnsUploadUrl;
+        if (url == null || url.isEmpty()) return;
 
         Request.Builder builder = new Request.Builder().url(url);
         builder.addHeader("Authorization", "Bearer " + token);
@@ -148,96 +154,111 @@ public class WechatCrawler {
 
 
     private static void fetchAndUploadData(String username, String password, Set<Integer> difficulties) {
-        htmlCache.clear();
+        writeLog("[SYSTEM] 开始流式同步成绩 (按分类拆分)");
 
-        writeLog("[SYSTEM] 开始获取用户成绩");
+        // 1. 基础信息抓取与同步 (Lxns 强制要求玩家档案确立)
+        String userHtml = fetchHtml(-1, null);
+        if (userHtml != null) {
+            if (password != null && !password.isEmpty()) {
+                uploadToLxns(-1, userHtml, password);
+            }
+            sleep(1000);
+        }
 
-        // 额外抓取项：用户信息与最近游玩（两款游戏都需要）
-        fetchSingleHtmlToCache(-1); // 用户资料页（落雪规范要求上传）
-        sleep(1000);
-        fetchSingleHtmlToCache(-2); // 最近游玩页
-        sleep(1000);
+        String recentHtml = fetchHtml(-2, null);
+        if (recentHtml != null) {
+            if (password != null && !password.isEmpty()) {
+                uploadToLxns(-2, recentHtml, password);
+            }
+            sleep(1000);
+        }
+
+        // 2. 嵌套迭代：难度 -> 分类
+        java.util.List<String> genres = com.noharayh.otokit.DataContext.GenreList;
 
         for (Integer diff : difficulties) {
             if (CrawlerCaller.isStopped) {
-                writeLog("[SYSTEM] 传分业务终止");
+                writeLog("[SYSTEM] 同步业务终止");
                 return;
             }
-            fetchSingleHtmlToCache(diff);
-            sleep(1200); // 抓取间隔保护
+
+            // 特殊情况：宴谱 (10)、中二节奏、或未下发分类列表时，执行全量同步
+            // 注意：中二节奏由 URL 难度参数天然分流，无需二级分类
+            if (diff == 10 || com.noharayh.otokit.DataContext.GameType == 1 || genres == null || genres.isEmpty()) {
+                syncSingleSegment(diff, null, username, password);
+                sleep(1200);
+            } else {
+                // 舞萌 DX 常规难度：遍历各分类进行细分抓取
+                for (String genreId : genres) {
+                    if (CrawlerCaller.isStopped) return;
+                    syncSingleSegment(diff, genreId, username, password);
+                    sleep(1200); // 频率保护
+                }
+            }
         }
 
-        // 阶段 2: 集中上传
-        if (htmlCache.isEmpty()) {
-            writeLog("[ERROR] 获取成绩失败: {异常 未获取到有效 HTML 数据，取消上传}");
+        writeLog("[SYSTEM] 流式同步任务执行完毕");
+    }
+
+    /** 同步单个数据片段 (Fetch -> Upload -> Free) */
+    private static void syncSingleSegment(int diff, String genreId, String dfToken, String lxnsToken) {
+        String label = getDiffLabel(diff);
+        String logLabel = label + (genreId != null ? " [分类 " + genreId + "]" : "");
+        
+        writeLog("[DOWNLOAD] 正在抓取 " + logLabel);
+        String html = fetchHtml(diff, genreId);
+        
+        if (html == null || html.length() < 500) {
+            writeLog("[WARN] " + logLabel + " 数据抓取为空或过短，跳过同步");
             return;
         }
 
-        writeLog("[SYSTEM] 成绩获取完毕，开始上传至目标平台...");
-
-        if (username != null && !username.isEmpty()) {
-            writeLog("[SYSTEM] 开始上传至水鱼服务器");
-            for (Map.Entry<Integer, String> entry : htmlCache.entrySet()) {
-                if (CrawlerCaller.isStopped) return;
-                if (entry.getKey() < 0) continue; // 水鱼不接受内部页，跳过
-                uploadToDivingFish(entry.getKey(), entry.getValue(), username);
-            }
+        // 流式上传：不进入 htmlCache，直接发送
+        if (dfToken != null && !dfToken.isEmpty()) {
+            uploadToDivingFish(diff, html, dfToken);
+        }
+        if (lxnsToken != null && !lxnsToken.isEmpty()) {
+            uploadToLxns(diff, html, lxnsToken);
         }
 
-        if (password != null && !password.isEmpty()) {
-            writeLog("[SYSTEM] 开始上传至落雪服务器");
-            
-            // 优先上传用户信息页 (-1) 以确立玩家档案，防止成绩 404
-            if (htmlCache.containsKey(-1)) {
-                uploadToLxns(-1, htmlCache.get(-1), password);
-                sleep(1000);
-            }
-
-            for (Map.Entry<Integer, String> entry : htmlCache.entrySet()) {
-                if (CrawlerCaller.isStopped) return;
-                // 跳过用户信息页 (已传) 和 最近游玩页 (-2)
-                if (entry.getKey() < 0) continue;
-                sleep(1000); // 防止触发落雪限流
-                uploadToLxns(entry.getKey(), entry.getValue(), password);
-            }
-        }
+        // 显式内存释放
+        html = null;
+        System.gc();
     }
 
-    private static void fetchSingleHtmlToCache(Integer diff) {
-        if (CrawlerCaller.isStopped) return;
+    private static String fetchHtml(int diff, String genreId) {
+        if (CrawlerCaller.isStopped) return null;
 
-        String baseUrl = (com.noharayh.otokit.DataContext.GameType == 0)
-                ? "https://maimai.wahlap.com/maimai-mobile/"
-                : "https://chunithm.wahlap.com/mobile/";
+        String baseUrl = com.noharayh.otokit.DataContext.WahlapBaseUrl;
+        if (baseUrl == null || baseUrl.isEmpty()) return null;
 
         String url;
         if (com.noharayh.otokit.DataContext.GameType == 0) {
-            // 舞萌 DX 抓取路径
-            if (diff == -1) url = baseUrl + "friend/userFriendCode/"; // 落雪规范页：含 friendCode
-            else if (diff == -2) url = baseUrl + "record/";           // 最近游玩
-            else if (diff == 10) url = baseUrl + "record/musicGenre/search/?genre=99&diff=10"; // 宴谱 Utage
-            else url = baseUrl + "record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
+            // 舞萌 DX 抓取逻辑
+            if (diff == -1) url = baseUrl + "friend/userFriendCode/";
+            else if (diff == -2) url = baseUrl + "record/";
+            else if (diff == 10) url = baseUrl + "record/musicGenre/search/?genre=99&diff=10";
+            else {
+                // 判别：是按分类拆分还是全量搜索
+                if (genreId != null && !genreId.isEmpty()) {
+                    url = baseUrl + "record/musicGenre/search/?genre=" + genreId + "&diff=" + diff;
+                } else {
+                    url = baseUrl + "record/musicSort/search/?search=V&sort=1&playCheck=on&diff=" + diff;
+                }
+            }
         } else {
-            // 中二节奏 抓取路径
-            if (diff == -1) url = baseUrl + "home/playerData";       // 落雪规范页：含玩家信息
-            else if (diff == -2) url = baseUrl + "record/playlog";   // 最近游玩
-            else if (diff == 5 || diff == 10) url = baseUrl + "record/worldsEndList"; // World's End (允许 5 或 10)
-            else url = baseUrl + "record/musicGenre?difficulty=" + diff; // BASIC~ULTIMA 按难度
+            // 中二节奏 抓取逻辑
+            if (diff == -1) url = baseUrl + "home/playerData";
+            else if (diff == -2) url = baseUrl + "record/playlog";
+            else if (diff == 5 || diff == 10) url = baseUrl + "record/worldsEndList";
+            else url = baseUrl + "record/musicGenre?difficulty=" + diff;
         }
 
-        String label = getDiffLabel(diff);
         Request request = new Request.Builder().url(url).build();
         try (Response response = client.newCall(request).execute()) {
-            String html = Objects.requireNonNull(response.body()).string();
-            if (html.length() < 1000) {
-                writeLog("[WARN] " + label + " 页面响应过短，可能抓取异常");
-            }
-            htmlCache.put(diff, html);
-            if (diff >= 0) { // 不向前端暴露内部抓取页的日志
-                writeLog("[DOWNLOAD] 已获取 " + label + " 数据");
-            }
+            return Objects.requireNonNull(response.body()).string();
         } catch (Exception e) {
-            writeLog("[ERROR] 获取 " + label + " 失败: {异常 " + e.getMessage() + "}");
+            return null;
         }
     }
 
@@ -248,7 +269,9 @@ public class WechatCrawler {
     protected String getWechatAuthUrl() throws IOException {
         this.buildHttpClient(true);
 
-        String gamePath = (com.noharayh.otokit.DataContext.GameType == 0) ? "maimai-dx" : "chunithm";
+        String url = com.noharayh.otokit.DataContext.WahlapAuthUrl;
+        if (url == null || url.isEmpty()) return "";
+
         Request request = new Request.Builder()
                 .addHeader("Host", "tgk-wcaime.wahlap.com")
                 .addHeader("Upgrade-Insecure-Requests", "1")
@@ -261,15 +284,15 @@ public class WechatCrawler {
                 .addHeader("Sec-Fetch-Dest", "document")
                 .addHeader("Accept-Encoding", "gzip, deflate")
                 .addHeader("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7")
-                .url("https://tgk-wcaime.wahlap.com/wc_auth/oauth/authorize/" + gamePath)
+                .url(url)
                 .build();
 
         Call call = client.newCall(request);
         Response response = call.execute();
-        String url = response.request().url().toString().replace("redirect_uri=https", "redirect_uri=http");
+        String redirectUrl = response.request().url().toString().replace("redirect_uri=https", "redirect_uri=http");
 
-        Log.d(TAG, "Auth url:" + url);
-        return url;
+        Log.d(TAG, "Auth url:" + redirectUrl);
+        return redirectUrl;
     }
 
     public void fetchAndUploadData(String username, String password, Set<Integer> difficulties, String wechatAuthUrl) throws IOException {
@@ -281,7 +304,6 @@ public class WechatCrawler {
         // Login wechat
         try {
             startAuth();
-            writeLog("[AUTH] 发起微信登录授权...");
             this.loginWechat(wechatAuthUrl);
             writeLog("[AUTH] 重定向完成，正在获取数据...");
         } catch (Exception error) {

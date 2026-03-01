@@ -15,6 +15,30 @@ object CrawlerCaller {
     @Volatile
     var isStopped: Boolean = false
 
+    private var divingFishFuture: java.util.concurrent.CompletableFuture<Unit>? = null
+
+    @JvmStatic
+    fun prepareDivingFishSync() {
+        divingFishFuture = java.util.concurrent.CompletableFuture()
+    }
+
+    @JvmStatic
+    fun waitForDivingFishSync(timeoutMs: Long): Boolean {
+        return try {
+            divingFishFuture?.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+            true
+        } catch (e: Exception) {
+            false
+        } finally {
+            divingFishFuture = null
+        }
+    }
+
+    @JvmStatic
+    fun notifyDivingFishTaskDone() {
+        divingFishFuture?.complete(Unit)
+    }
+
 
 
     fun getWechatAuthUrl(): String? {

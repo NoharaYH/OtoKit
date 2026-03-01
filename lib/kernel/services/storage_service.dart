@@ -10,6 +10,8 @@ class StorageService {
   // Keys
   static const kDivingFishToken = 'df_token';
   static const kLxnsToken = 'lxns_token';
+  static const kLxnsTokenPrefix = 'lxns_token_';
+  static const kLxnsRefreshTokenPrefix = 'lxns_refresh_token_';
   static const kStartupPage = 'startup_page'; // 'mai' | 'chu' | 'last'
   static const kLastExitPage = 'last_exit_page'; // '0' | '1'
 
