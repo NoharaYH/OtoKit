@@ -279,13 +279,13 @@ class TransferProvider extends ChangeNotifier {
             if (response != null && response['message'] == '更新成功') {
               final label = (diff == 10) ? UiStrings.diffLabelUtage : "难度$diff";
               appendLog(
-                "${UiStrings.logTagUpload} ${UiStrings.modeDivingFish} 上传 $label 成功 状态: 200",
+                "${UiStrings.logTagUpload} ${UiStrings.logUploadSuccess.replaceAll("{0}", UiStrings.modeDivingFish).replaceAll("{1}", label)}",
               );
               // Java 侧会负责打印最终的完毕日志，此处不再冗余重复
             } else {
               final label = (diff == 10) ? UiStrings.diffLabelUtage : "难度$diff";
               appendLog(
-                "${UiStrings.logTagError} ${UiStrings.modeDivingFish} 上传 $label 失败: ${response?['message'] ?? '未知错误'}",
+                "${UiStrings.logTagError} ${UiStrings.logErrUpload.replaceAll("{0}", UiStrings.modeDivingFish).replaceAll("{1}", label).replaceAll("{2}", "400").replaceAll("{3}", response?['message'] ?? '未知错误')}",
               );
             }
           }
@@ -293,7 +293,7 @@ class TransferProvider extends ChangeNotifier {
           await _channel.invokeMethod('notifyDivingFishTaskDone');
         }
       } catch (e) {
-        appendLog("${UiStrings.logTagError} 手机侧解析/上传异常: $e");
+        appendLog("${UiStrings.logTagError} ${UiStrings.logErrParse}: $e");
         await _channel.invokeMethod('notifyDivingFishTaskDone');
       }
       return;
@@ -512,7 +512,9 @@ class TransferProvider extends ChangeNotifier {
       //    用户点击允许后 onVpnPrepared 触发 startVpn()，届时再执行 _afterVpnReady
     } catch (e) {
       _pendingWechat = false;
-      appendLog(UiStrings.logErrVpnStart.replaceAll("{0}", e.toString()));
+      appendLog(
+        "${UiStrings.logTagError} ${UiStrings.logErrVpnStart.replaceAll("{0}", e.toString())}",
+      );
     }
   }
 

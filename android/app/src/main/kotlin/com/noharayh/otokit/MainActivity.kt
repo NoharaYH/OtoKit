@@ -126,14 +126,14 @@ class MainActivity : FlutterActivity(),
 
     override fun onStartAuth() {
         runOnUiThread {
-            methodChannel?.invokeMethod("onLogReceived", "[AUTH] 正在发起授权...")
+            methodChannel?.invokeMethod("onLogReceived", "${getString(R.string.log_tag_auth)} ${getString(R.string.log_auth_start)}")
         }
     }
 
     override fun onFinishUpdate() {
         runOnUiThread {
             methodChannel?.invokeMethod("onStatusChanged", mapOf(
-                "status" to "传分完成",
+                "status" to getString(R.string.log_sync_finish),
                 "isRunning" to false
             ))
         }
@@ -141,7 +141,7 @@ class MainActivity : FlutterActivity(),
 
     override fun onError(e: Exception) {
         runOnUiThread {
-            methodChannel?.invokeMethod("onLogReceived", "[ERROR] ${e.message}")
+            methodChannel?.invokeMethod("onLogReceived", "${getString(R.string.log_tag_error)} ${e.message}")
             methodChannel?.invokeMethod("onStatusChanged", mapOf(
                 "status" to null,
                 "isRunning" to false

@@ -22,4 +22,22 @@
     <string name="disconnected">Disconnected</string>
     <string name="username">查分器账号</string>
     <string name="password">查分器密码</string>
+
+    <!-- Log Tags -->
+    <string name="log_tag_system">[SYSTEM]</string>
+    <string name="log_tag_version">[VERSION]</string>
+    <string name="log_tag_vpn">[VPN]</string>
+    <string name="log_tag_clipboard">[CLIPBOARD]</string>
+    <string name="log_tag_auth">[AUTH]</string>
+    <string name="log_tag_download">[DOWNLOAD]</string>
+    <string name="log_tag_upload">[UPLOAD]</string>
+    <string name="log_tag_error">[ERROR]</string>
+    <string name="log_tag_done">[DONE]</string>
+
+    <!-- Log Messages -->
+    <string name="log_auth_start">正在发起授权...</string>
+    <string name="log_auth_redirected">重定向完成，正在获取数据...</string>
+    <string name="log_sync_finish">传分完成</string>
+    <string name="log_sys_terminated">同步业务终止</string>
+    <string name="log_vpn_closed">已关闭代理服务</string>
 </resources>

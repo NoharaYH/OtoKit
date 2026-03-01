@@ -100,7 +100,7 @@ public class LocalVpnService extends VpnService implements Runnable {
             m_DnsProxy = new DnsProxy();
             m_DnsProxy.start();
         } catch (Exception e) {
-            writeLog("[ERROR] 代理服务启动失败: TCP/DNS Proxy");
+            writeLog("%s 代理服务启动失败: TCP/DNS Proxy", getString(R.string.log_tag_error));
         }
 
         super.onCreate();
@@ -191,8 +191,8 @@ public class LocalVpnService extends VpnService implements Runnable {
 
             ProxyConfig.AppInstallID = getAppInstallID();
             ProxyConfig.AppVersion = getVersionName();
-            writeLog("[VERSION] Android: %s", Build.VERSION.RELEASE);
-            writeLog("[VERSION] APP: %s", ProxyConfig.AppVersion);
+            writeLog("%s Android: %s", getString(R.string.log_tag_version), Build.VERSION.RELEASE);
+            writeLog("%s APP: %s", getString(R.string.log_tag_version), ProxyConfig.AppVersion);
 
             waitUntilPreapred();
 
@@ -202,10 +202,10 @@ public class LocalVpnService extends VpnService implements Runnable {
             Log.e(TAG, "Exception", e);
         } catch (Exception e) {
             e.printStackTrace();
-            writeLog("[ERROR] 代理服务启动失败: %s", e.toString());
+            writeLog("%s 代理服务启动失败: %s", getString(R.string.log_tag_error), e.toString());
         }
 
-        writeLog("[VPN] 已关闭代理服务");
+        writeLog("%s %s", getString(R.string.log_tag_vpn), getString(R.string.log_vpn_closed));
         dispose();
     }
 

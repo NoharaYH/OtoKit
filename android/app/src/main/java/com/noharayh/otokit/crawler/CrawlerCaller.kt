@@ -46,7 +46,7 @@ object CrawlerCaller {
             val crawler = WechatCrawler()
             crawler.getWechatAuthUrl()
         } catch (error: IOException) {
-            writeLog("[ERROR] 发起微信登录授权失败: \${error.message}")
+            writeLog("[ERROR] 发起微信登录授权失败: ${error.message}")
             onError(error)
             null
         }
