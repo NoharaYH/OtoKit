@@ -24,7 +24,8 @@ class _ScoreSyncPageState extends State<ScoreSyncPage>
   late final PageController _localController;
   bool _initialized = false;
 
-  // 按 gameType 缓存模式选择（0=水鱼, 1=双平台, 2=落雪），防止游戏切换时重置
+  // 按 gameIndex 缓存游戏内配置（防止切换页面时重置）
+  // transferMode: 0=水鱼, 1=双平台, 2=落雪
   final Map<int, int> _transferModes = {0: 0, 1: 0};
 
   @override
@@ -62,7 +63,7 @@ class _ScoreSyncPageState extends State<ScoreSyncPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
-      context.read<GameProvider>().saveExitPage();
+      context.read<GameProvider>().saveLastActiveState();
     }
   }
 
@@ -85,7 +86,13 @@ class _ScoreSyncPageState extends State<ScoreSyncPage>
           skin: const StarBackgroundSkin(),
           content: MaiSyncPage(
             mode: _transferModes[0]!,
-            onModeChanged: (val) => setState(() => _transferModes[0] = val),
+            onModeChanged: (val) {
+              setState(() => _transferModes[0] = val);
+              context.read<GameProvider>().updateActiveContext(
+                game: 'Mai',
+                service: _serviceLabel(val),
+              );
+            },
           ),
           title: 'Maimai DX',
         ),
@@ -93,11 +100,29 @@ class _ScoreSyncPageState extends State<ScoreSyncPage>
           skin: const StarBackgroundSkin(),
           content: ChuSyncPage(
             mode: _transferModes[1]!,
-            onModeChanged: (val) => setState(() => _transferModes[1] = val),
+            onModeChanged: (val) {
+              setState(() => _transferModes[1] = val);
+              context.read<GameProvider>().updateActiveContext(
+                game: 'Chu',
+                service: _serviceLabel(val),
+              );
+            },
           ),
           title: 'Chunithm',
         ),
       ],
     );
+  }
+
+  /// 模式索引转化为存储字符串（与 Provider payload 对齐）
+  static String _serviceLabel(int mode) {
+    switch (mode) {
+      case 1:
+        return 'Dual';
+      case 2:
+        return 'LuoXue';
+      default:
+        return 'DivingFish';
+    }
   }
 }

@@ -12,8 +12,10 @@ class StorageService {
   static const kLxnsToken = 'lxns_token';
   static const kLxnsTokenPrefix = 'lxns_token_';
   static const kLxnsRefreshTokenPrefix = 'lxns_refresh_token_';
-  static const kStartupPage = 'startup_page'; // 'mai' | 'chu' | 'last'
-  static const kLastExitPage = 'last_exit_page'; // '0' | '1'
+  static const kStartupPrefConfig =
+      'startup_pref_config'; // 'Primary:Secondary:Tertiary'
+  static const kLastActiveState =
+      'last_active_state_cache'; // JSON: {page, game}
 
   // Generic Write
   Future<void> save(String key, String value) async {
