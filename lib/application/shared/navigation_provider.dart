@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 enum PageTag { scoreSync, musicData }
@@ -7,6 +8,24 @@ class NavigationProvider extends ChangeNotifier {
   bool _isDeckOpen = false;
   bool _isSettingsOpen = false;
   double _anchorY = 0.0;
+
+  /// 背景快照位图 (Snapshot Isolation)
+  ui.Image? _bgSnapshot;
+  ui.Image? get bgSnapshot => _bgSnapshot;
+
+  void setBgSnapshot(ui.Image? img) {
+    if (_bgSnapshot != img) {
+      _bgSnapshot?.dispose();
+    }
+    _bgSnapshot = img;
+    notifyListeners();
+  }
+
+  void clearBgSnapshot() {
+    _bgSnapshot?.dispose();
+    _bgSnapshot = null;
+    notifyListeners();
+  }
 
   // 用于交错动画的弹簧物理参数，按需存储
   // double _deckScrollOffset = 0.0;
@@ -49,9 +68,19 @@ class NavigationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 外部设置的捕获任务 (用于在打开前执行 RepaintBoundary.toImage)
+  Future<void> Function()? captureTask;
+
   /// 打开设置页（作为叠加层）
-  void openSettings() {
+  void openSettings() async {
+    if (_isSettingsOpen) return;
     if (_isDeckOpen) _isDeckOpen = false;
+
+    // 如果注册了捕获任务，则优先执行 (Snapshot Isolation)
+    if (captureTask != null) {
+      await captureTask!();
+    }
+
     _isSettingsOpen = true;
     notifyListeners();
   }

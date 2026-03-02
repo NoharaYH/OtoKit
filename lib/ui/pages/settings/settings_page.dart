@@ -25,6 +25,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage>
     with TickerProviderStateMixin {
+  late NavigationProvider _nav;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -86,9 +87,17 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _nav = context.read<NavigationProvider>();
+  }
+
+  @override
   void dispose() {
     _fadeController.dispose();
     _expansionController.dispose();
+    // 采用缓存引用清理背景快照，规避 context 停用异常 (Memory GC)
+    _nav.clearBgSnapshot();
     super.dispose();
   }
 
@@ -111,26 +120,44 @@ class _SettingsPageState extends State<SettingsPage>
           color: Colors.transparent,
           child: Stack(
             children: [
-              // 1. 全局背景拦截 (仅随 _fadeAnimation 变化)
+              // 1. 物理隔离快照背景 (Snapshot Isolation Layer)
               Positioned.fill(
-                child: GestureDetector(
-                  onTap: () => _activeCategoryIndex == null
-                      ? _handleBack()
-                      : _handleCategoryBack(),
-                  child: AnimatedBuilder(
-                    animation: _fadeAnimation,
-                    builder: (context, _) => Opacity(
-                      opacity: _fadeAnimation.value,
-                      child: RepaintBoundary(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                          child: Container(
-                            color: UiColors.white.withValues(alpha: 0.25),
-                          ),
+                child: Consumer<NavigationProvider>(
+                  builder: (context, nav, _) {
+                    final snapshot = nav.bgSnapshot;
+                    return GestureDetector(
+                      onTap: () => _activeCategoryIndex == null
+                          ? _handleBack()
+                          : _handleCategoryBack(),
+                      child: AnimatedBuilder(
+                        animation: _fadeAnimation,
+                        builder: (context, _) => Opacity(
+                          opacity: _fadeAnimation.value,
+                          child: snapshot != null
+                              ? RepaintBoundary(
+                                  child: ImageFiltered(
+                                    imageFilter: ImageFilter.blur(
+                                      sigmaX: 15.0, // 降低模糊半径，提升画面通透度
+                                      sigmaY: 15.0,
+                                      tileMode: TileMode.mirror,
+                                    ),
+                                    child: Transform.scale(
+                                      scale: 1.0, // 回滚放大动效
+                                      child: RawImage(
+                                        image: snapshot,
+                                        fit: BoxFit.cover,
+                                        filterQuality: FilterQuality.low,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Container(
+                                  color: UiColors.white.withValues(alpha: 0.25),
+                                ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
 
