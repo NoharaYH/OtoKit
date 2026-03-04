@@ -50,7 +50,7 @@ final AppTheme? currentTheme = Theme.of(context).extension<AppTheme>();
 
 // 2. 决策链路：显式属性劫持 > 上下文解析 > 静态兜底锁
 final Color finalPrimaryColor = widget.customHighlightColor
-    ?? currentTheme?.medium
+    ?? currentTheme?.basic
     ?? UiColors.grey500;
 ```
 
@@ -67,15 +67,15 @@ final Color finalPrimaryColor = widget.customHighlightColor
 
 ### 4.1 UI 基础交互与排印 (原子/分子级)
 
-- 核心功能按钮 (如 ConfirmButton)：汲取 basic色。同时遵守柔性 DI 保持 customHighlightColor 开放重写。
-- 分页控制指示点：汲取 basic色。
+- 核心功能按钮 (如 ConfirmButton)：汲取 basic 色。同时遵守柔性 DI 保持 customHighlightColor 开放重写。
+- 分页控制指示点：汲取 basic 色。
 - 标签分类激活文字：汲取 basic色。
 - 辅层轻量高光文本：汲取 light
 - 弹窗及强反差承载文本：汲取 dark色。典型为 MusicData 内深白底弹框的正文，MUST 被封顶于 #2D2D2D 的暗色极值之下。
 
 ### 4.2 业务容器与面板基建 (区块级)
 
-- 边栏面板底区：汲取 medium色作视觉锚定。
+- 边栏面板底区：汲取 basic 色作视觉锚定。
 - Logo 水印与大修饰层：汲取 light色，配合透明通道构筑。
 - SkinColorPanel 面板系统：包含内部 HSL 调节控件、矩形目标取色选择器。MUST 严格绑定当前处于变更管线的 AppTheme 实例。
 - \_MiniPreview：模拟高保真沙盒预览，MUST 读取宿主传入的子集主题色彩而非当前全局应用主题。
@@ -93,3 +93,23 @@ final Color finalPrimaryColor = widget.customHighlightColor
 - PageShell 容器体系：内部的全局半透明 Glass 层、模糊过渡罩。
 - 所有设置页面 (Settings)：除 SkinColorPanel 等强域属区块外的底座、全量列表背景。
 - 数据卡片体系：任何承担基础信息展示任务的白色白板、容器 Card 底色区块。
+
+## 5. 待重构组件与代码定位点
+
+基于上述规范，以下为实际开发中需要动手改写的组件文件清单及重构策略：
+
+### 5.1 待引入柔性 DI 的 UI 基础交互 (原子组件)
+
+- **`lib/ui/design_system/kit_shared/confirm_button.dart`**
+  - **方案**：增加 `final Color? customHighlightColor;` 构造参数。将 `build` 函数里的强提取改为三阶降级：`customHighlightColor ?? Theme.of(context).extension<AppTheme>()?.basic ?? UiColors.grey500`。
+- **`lib/ui/design_system/kit_shared/sticky_dot_indicator.dart`**
+  - **方案**：增加指示器高亮色覆盖参数。内部按优先级提取 `basic` 色，未找到时降级为灰度。
+- **`lib/ui/design_system/kit_shared/confirmation_box.dart`** (及同类文字弹窗)
+  - **方案**：读取 `AppTheme` 的 `dark` 色作为重点正文颜色，并引入上限封顶检测，确保不会因开发者手滑配置出比 `#2D2D2D` 更浅的黑导致看不清。
+
+### 5.2 待接驳动态基层的业务与路由节点 (页面/区块级)
+
+- **`lib/ui/design_system/kit_setting/skin_color_panel.dart`**
+  - **方案**：作为自定义主题色板块，其内部的 HSL 调节器、调色滑块必须放弃读取默认全局主题，而是直接严格绑定当前正在 “被调制中” 的 `AppTheme` Variant 实例。
+- **`lib/ui/pages/score_sync/...`** 及 **`lib/ui/pages/music_data/...`**
+  - **方案**：剥除页面底层 Container 中的背景常量图或纯色色块，挂载为 `currentTheme.buildBackground(context)`，实现响应式皮肤替换。

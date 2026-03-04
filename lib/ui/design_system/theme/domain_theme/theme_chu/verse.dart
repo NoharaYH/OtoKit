@@ -19,16 +19,16 @@ class VerseTheme extends AppTheme {
   Color get light => const Color.fromARGB(255, 165, 208, 255);
 
   @override
-  Color get medium => const Color.fromARGB(255, 111, 140, 255);
+  Color get basic => const Color.fromARGB(255, 111, 140, 255);
 
   @override
   Color get dark => const Color.fromARGB(255, 0, 98, 255);
 
   @override
-  Color get subtitleColor => medium;
+  Color get subtitleColor => basic;
 
   @override
-  Color get dotColor => medium;
+  Color get dotColor => basic;
 
   @override
   Widget buildBackground(BuildContext context) {
@@ -81,7 +81,7 @@ class VerseTheme extends AppTheme {
   @override
   AppTheme copyWith({
     Color? light,
-    Color? medium,
+    Color? basic,
     Color? dark,
     Color? subtitleColor,
     Color? dotColor,
@@ -91,7 +91,7 @@ class VerseTheme extends AppTheme {
       titleVal: themeTitle,
       idVal: themeId,
       lightColor: light ?? this.light,
-      mediumColor: medium ?? this.medium,
+      basicColor: basic ?? this.basic,
       darkColor: dark ?? this.dark,
       subtitleColorVal: subtitleColor ?? this.subtitleColor,
       dotColorVal: dotColor ?? this.dotColor,

@@ -378,7 +378,7 @@ class _SettingsPageState extends State<SettingsPage>
       key: ValueKey('themed_page_${_activeCategoryIndex}'),
       data: Theme.of(
         context,
-      ).copyWith(extensions: [skin.copyWith(medium: cat.color)]),
+      ).copyWith(extensions: [skin.copyWith(basic: cat.color)]),
       child: cat.page,
     );
   }

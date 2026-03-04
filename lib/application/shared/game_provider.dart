@@ -156,7 +156,7 @@ class GameProvider extends ChangeNotifier {
     if (!_themePrefs.hasCustomization(base.themeId)) return base;
     return base.copyWith(
       light: _themePrefs.get(base.themeId, 'light'),
-      medium: _themePrefs.get(base.themeId, 'medium'),
+      basic: _themePrefs.get(base.themeId, 'basic'),
       dark: _themePrefs.get(base.themeId, 'dark'),
       dotColor: _themePrefs.get(base.themeId, 'dotColor'),
       subtitleColor: _themePrefs.get(base.themeId, 'subtitleColor'),

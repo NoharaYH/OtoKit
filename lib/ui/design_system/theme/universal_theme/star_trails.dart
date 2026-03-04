@@ -20,7 +20,7 @@ class StarTrailsTheme extends AppTheme {
   Color get light => const Color(0xFF1A4FBD);
 
   @override
-  Color get medium => const Color(0xFF6A1EBD);
+  Color get basic => const Color(0xFF6A1EBD);
 
   @override
   Color get dark => const Color(0xFF05080A); // 已满足 <= #2D2D2D 兜底，或在内部提供
@@ -35,7 +35,7 @@ class StarTrailsTheme extends AppTheme {
   Widget buildBackground(BuildContext context) {
     return _StarBackground(
       lightColor: light,
-      mediumColor: medium,
+      basicColor: basic,
       darkColor: dark,
     );
   }
@@ -43,7 +43,7 @@ class StarTrailsTheme extends AppTheme {
   @override
   AppTheme copyWith({
     Color? light,
-    Color? medium,
+    Color? basic,
     Color? dark,
     Color? subtitleColor,
     Color? dotColor,
@@ -53,7 +53,7 @@ class StarTrailsTheme extends AppTheme {
       titleVal: themeTitle,
       idVal: themeId,
       lightColor: light ?? this.light,
-      mediumColor: medium ?? this.medium,
+      basicColor: basic ?? this.basic,
       darkColor: dark ?? this.dark,
       subtitleColorVal: subtitleColor ?? this.subtitleColor,
       dotColorVal: dotColor ?? this.dotColor,
@@ -64,12 +64,12 @@ class StarTrailsTheme extends AppTheme {
 
 class _StarBackground extends StatefulWidget {
   final Color lightColor;
-  final Color mediumColor;
+  final Color basicColor;
   final Color darkColor;
 
   const _StarBackground({
     required this.lightColor,
-    required this.mediumColor,
+    required this.basicColor,
     required this.darkColor,
   });
 
@@ -98,7 +98,7 @@ class _StarBackgroundState extends State<_StarBackground>
   List<_AuroraBlobDNA> _generateBlobDNA() {
     final coreColors = [
       widget.lightColor,
-      widget.mediumColor,
+      widget.basicColor,
       const Color(0xFF0891B2),
       const Color(0xFFDB2777),
       const Color(0xFF4F46E5),

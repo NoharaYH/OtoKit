@@ -191,7 +191,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
                         );
                         resolvedSkin = maiSkin.lerp(chuSkin, page);
                       }
-                      final themeColor = resolvedSkin.medium;
+                      final themeColor = resolvedSkin.basic;
 
                       return Positioned(
                         top: UiSizes.getTopMarginWithSafeArea(context) + 12.0,

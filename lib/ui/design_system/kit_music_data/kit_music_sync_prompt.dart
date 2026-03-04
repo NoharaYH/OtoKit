@@ -272,7 +272,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
                   : progressValue,
               minHeight: 6,
               backgroundColor: skin.light.withValues(alpha: 0.3),
-              valueColor: AlwaysStoppedAnimation<Color>(skin.medium),
+              valueColor: AlwaysStoppedAnimation<Color>(skin.basic),
             ),
           ),
         ],

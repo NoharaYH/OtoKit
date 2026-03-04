@@ -80,7 +80,7 @@ class _StartupPrefMenuState extends State<StartupPrefMenu> {
   @override
   Widget build(BuildContext context) {
     final skin = Theme.of(context).extension<AppTheme>()!;
-    final accent = skin.medium;
+    final accent = skin.basic;
 
     final showSecondary =
         _tempPrimary == StartupPrimary.sync ||

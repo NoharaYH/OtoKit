@@ -50,12 +50,12 @@ class _KitNavCapsuleState extends State<KitNavCapsule> {
     final bgColor = UiColors.white;
 
     // Define colors, providing fallbacks if skin is not available
-    final Color mediumColor = skin?.medium ?? UiColors.grey500;
+    final Color basicColor = skin?.basic ?? UiColors.grey500;
     final Color darkColor = skin?.dark ?? UiColors.grey800;
 
     final contentColor = widget.isSelected
-        ? mediumColor
-        : mediumColor.withValues(alpha: 0.6);
+        ? basicColor
+        : basicColor.withValues(alpha: 0.6);
 
     // 强制内部元素跟随组件设定的 55.2 高宽 (46 * 1.2)
     const double capSize = 55.2;
@@ -96,7 +96,7 @@ class _KitNavCapsuleState extends State<KitNavCapsule> {
               ),
               if (widget.isSelected)
                 BoxShadow(
-                  color: mediumColor.withValues(alpha: 0.2),
+                  color: basicColor.withValues(alpha: 0.2),
                   blurRadius: 10.0,
                   offset: const Offset(0, 4),
                 ),
@@ -107,7 +107,7 @@ class _KitNavCapsuleState extends State<KitNavCapsule> {
               // 独立的圆形按钮: 主题色 Icon，无需底色
               ? Icon(
                   widget.icon,
-                  color: widget.isSelected ? darkColor : mediumColor,
+                  color: widget.isSelected ? darkColor : basicColor,
                   size: 28.8,
                 )
               : Row(
@@ -119,7 +119,7 @@ class _KitNavCapsuleState extends State<KitNavCapsule> {
                       width: 38.4,
                       height: 38.4,
                       decoration: BoxDecoration(
-                        color: mediumColor, // 完美中心圆的主题底色
+                        color: basicColor, // 完美中心圆的主题底色
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,

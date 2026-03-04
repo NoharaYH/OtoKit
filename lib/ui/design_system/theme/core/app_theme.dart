@@ -22,8 +22,8 @@ abstract class AppTheme extends ThemeExtension<AppTheme> {
   /// 亮色调
   Color get light;
 
-  /// 中性色调
-  Color get medium;
+  /// 主色调（基础色）
+  Color get basic;
 
   /// 暗色调，抽象/子类实现必须保证最后兜底为 #2d2d2d
   Color get dark;
@@ -40,7 +40,7 @@ abstract class AppTheme extends ThemeExtension<AppTheme> {
   @override
   AppTheme copyWith({
     Color? light,
-    Color? medium,
+    Color? basic,
     Color? dark,
     Color? subtitleColor,
     Color? dotColor,
@@ -52,7 +52,7 @@ abstract class AppTheme extends ThemeExtension<AppTheme> {
     required String titleVal,
     required String idVal,
     required Color lightColor,
-    required Color mediumColor,
+    required Color basicColor,
     required Color darkColor,
     required Color subtitleColorVal,
     required Color dotColorVal,
@@ -63,7 +63,7 @@ abstract class AppTheme extends ThemeExtension<AppTheme> {
       titleVal: titleVal,
       idVal: idVal,
       lightColor: lightColor,
-      mediumColor: mediumColor,
+      basicColor: basicColor,
       darkColor: darkColor,
       subtitleColorVal: subtitleColorVal,
       dotColorVal: dotColorVal,
@@ -79,7 +79,7 @@ abstract class AppTheme extends ThemeExtension<AppTheme> {
       titleVal: themeTitle,
       idVal: themeId,
       lightColor: Color.lerp(light, other.light, t) ?? light,
-      mediumColor: Color.lerp(medium, other.medium, t) ?? medium,
+      basicColor: Color.lerp(basic, other.basic, t) ?? basic,
       darkColor: Color.lerp(dark, other.dark, t) ?? dark,
       subtitleColorVal:
           Color.lerp(subtitleColor, other.subtitleColor, t) ?? subtitleColor,
@@ -96,7 +96,7 @@ class _DynamicAppTheme extends AppTheme {
   final String idVal;
 
   final Color lightColor;
-  final Color mediumColor;
+  final Color basicColor;
   final Color darkColor;
   final Color subtitleColorVal;
   final Color dotColorVal;
@@ -108,7 +108,7 @@ class _DynamicAppTheme extends AppTheme {
     required this.titleVal,
     required this.idVal,
     required this.lightColor,
-    required this.mediumColor,
+    required this.basicColor,
     required this.darkColor,
     required this.subtitleColorVal,
     required this.dotColorVal,
@@ -128,7 +128,7 @@ class _DynamicAppTheme extends AppTheme {
   Color get light => lightColor;
 
   @override
-  Color get medium => mediumColor;
+  Color get basic => basicColor;
 
   @override
   Color get dark => darkColor;
@@ -146,7 +146,7 @@ class _DynamicAppTheme extends AppTheme {
   @override
   AppTheme copyWith({
     Color? light,
-    Color? medium,
+    Color? basic,
     Color? dark,
     Color? subtitleColor,
     Color? dotColor,
@@ -156,7 +156,7 @@ class _DynamicAppTheme extends AppTheme {
       titleVal: titleVal,
       idVal: idVal,
       lightColor: light ?? lightColor,
-      mediumColor: medium ?? mediumColor,
+      basicColor: basic ?? basicColor,
       darkColor: dark ?? darkColor,
       subtitleColorVal: subtitleColor ?? subtitleColorVal,
       dotColorVal: dotColor ?? dotColorVal,

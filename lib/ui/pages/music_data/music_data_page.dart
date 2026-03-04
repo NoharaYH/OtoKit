@@ -90,7 +90,7 @@ class _MusicDataPageState extends State<MusicDataPage> {
           content: ScoreSyncLogoWrapper(
             logoPath: AppAssets.logoMaimai,
             subtitle: 'MUSIC LIBRARY',
-            themeColor: maiSkin.medium,
+            themeColor: maiSkin.basic,
             child: const MaiMusicAssembly(),
           ),
         ),
@@ -100,7 +100,7 @@ class _MusicDataPageState extends State<MusicDataPage> {
           content: ScoreSyncLogoWrapper(
             logoPath: AppAssets.logoChunithm,
             subtitle: 'MUSIC LIBRARY',
-            themeColor: chuSkin.medium,
+            themeColor: chuSkin.basic,
             child: const ChuMusicAssembly(),
           ),
         ),

@@ -19,7 +19,7 @@ class _ColorTarget {
 }
 
 const _kColorTargets = [
-  _ColorTarget('medium', '基础色'),
+  _ColorTarget('basic', '基础色'),
   _ColorTarget('light', '亮色'),
   _ColorTarget('dark', '文字色'),
 ];
@@ -68,7 +68,7 @@ class SkinColorPanel extends StatefulWidget {
 class _SkinColorPanelState extends State<SkinColorPanel> {
   static const _autoCloseDelay = Duration(seconds: 20);
 
-  String _activeKey = 'medium';
+  String _activeKey = 'basic';
   double _hue = 0;
   double _saturation = 0;
   double _lightness = 0;
@@ -107,7 +107,7 @@ class _SkinColorPanelState extends State<SkinColorPanel> {
     final gp = context.read<GameProvider>();
     final resolved = gp.resolvedTheme(widget.skin);
     _localColors = {
-      'medium': resolved.medium,
+      'basic': resolved.basic,
       'light': resolved.light,
       'dark': resolved.dark,
     };
@@ -121,7 +121,7 @@ class _SkinColorPanelState extends State<SkinColorPanel> {
   void _onInteract() => _resetIdleTimer();
 
   void _syncFromTarget(String key) {
-    final color = _localColors[key] ?? widget.skin.medium;
+    final color = _localColors[key] ?? widget.skin.basic;
     final hsl = HSLColor.fromColor(color);
     setState(() {
       _hue = hsl.hue;
@@ -172,7 +172,7 @@ class _SkinColorPanelState extends State<SkinColorPanel> {
     gp.setThemePreferences(gp.themePrefs.resetSkin(widget.skinId));
     setState(() {
       _localColors = {
-        'medium': widget.skin.medium,
+        'basic': widget.skin.basic,
         'light': widget.skin.light,
         'dark': widget.skin.dark,
       };
@@ -238,7 +238,7 @@ class _SkinColorPanelState extends State<SkinColorPanel> {
                       hexController: _hexController,
                       activeColor: _currentColor,
                       hasCustom: hasCustom,
-                      accentColor: _localColors['medium'] ?? widget.skin.medium,
+                      accentColor: _localColors['basic'] ?? widget.skin.basic,
                       onHslChanged: _onHslChanged,
                       onHexSubmit: _onHexSubmit,
                       onHexFocusChange: (f) => setState(() => _hexFocused = f),
@@ -273,9 +273,9 @@ class _SkinColorPanelState extends State<SkinColorPanel> {
 // - 绝对孤立封闭堆栈：禁止 import 或挂载任何业务 DOM
 // - 宽度从 88 → 132（扩张 50%）
 // - 底层 skin.buildBackground 由渐变模拟 → 叠加真实 BackdropFilter 毛玻璃
-// - 右上角 Gear + Menu 图标（medium 着色）
+// - 右上角 Gear + Menu 图标（basic 着色）
 // - 居中 LOGO + 两颗指示点 + light 半透副文本
-// - 悬底大体积白色卡片（medium 按钮 + dark 文字）
+// - 悬底大体积白色卡片（basic 按钮 + dark 文字）
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MiniPreview extends StatelessWidget {
@@ -301,7 +301,7 @@ class _MiniPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final medium = localColors['medium'] ?? Colors.grey;
+    final basic = localColors['basic'] ?? Colors.grey;
     final light = localColors['light'] ?? Colors.grey.shade300;
     final dark = localColors['dark'] ?? Colors.grey.shade700;
     final logoAsset = _logoAsset;
@@ -325,8 +325,8 @@ class _MiniPreview extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color.lerp(light, medium, 0.3)!,
-                          Color.lerp(medium, dark, 0.6)!,
+                          Color.lerp(light, basic, 0.3)!,
+                          Color.lerp(basic, dark, 0.6)!,
                         ],
                       ),
                     ),
@@ -387,10 +387,10 @@ class _MiniPreview extends StatelessWidget {
                                   // 两颗轮播指示点
                                   Row(
                                     children: [
-                                      _Dot(color: medium, active: true),
+                                      _Dot(color: basic, active: true),
                                       const SizedBox(width: 3),
                                       _Dot(
-                                        color: medium.withValues(alpha: 0.3),
+                                        color: basic.withValues(alpha: 0.3),
                                         active: false,
                                       ),
                                     ],
@@ -399,20 +399,20 @@ class _MiniPreview extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            // Gear + Menu（medium 着色）
+                            // Gear + Menu（basic 着色）
                             Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   Icons.settings_outlined,
                                   size: 11,
-                                  color: medium,
+                                  color: basic,
                                 ),
                                 const SizedBox(height: 4),
                                 Icon(
                                   Icons.menu_rounded,
                                   size: 11,
-                                  color: medium,
+                                  color: basic,
                                 ),
                               ],
                             ),
@@ -453,14 +453,14 @@ class _MiniPreview extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 5),
-                              // medium 实心圆角按钮
+                              // basic 实心圆角按钮
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: medium,
+                                  color: basic,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Text(

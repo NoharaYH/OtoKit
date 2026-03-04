@@ -19,7 +19,7 @@ class CircleTheme extends AppTheme {
   Color get light => const Color(0xFFFFB7CD);
 
   @override
-  Color get medium => const Color.fromARGB(255, 255, 84, 138);
+  Color get basic => const Color.fromARGB(255, 255, 84, 138);
 
   // 严格遵循兜底规范，如果需要特定暗色可返回，但如果是文字色可能会被外部强制转为 #2d2d2d，
   // 视具体的渲染处而定，或者统一约束为不超过 #2d2d2d 的色域。
@@ -27,10 +27,10 @@ class CircleTheme extends AppTheme {
   Color get dark => const Color.fromARGB(255, 239, 9, 109);
 
   @override
-  Color get subtitleColor => medium;
+  Color get subtitleColor => basic;
 
   @override
-  Color get dotColor => medium;
+  Color get dotColor => basic;
 
   @override
   Widget buildBackground(BuildContext context) {
@@ -111,7 +111,7 @@ class CircleTheme extends AppTheme {
   @override
   AppTheme copyWith({
     Color? light,
-    Color? medium,
+    Color? basic,
     Color? dark,
     Color? subtitleColor,
     Color? dotColor,
@@ -125,7 +125,7 @@ class CircleTheme extends AppTheme {
       titleVal: themeTitle,
       idVal: themeId,
       lightColor: light ?? this.light,
-      mediumColor: medium ?? this.medium,
+      basicColor: basic ?? this.basic,
       darkColor: safeDark,
       subtitleColorVal: subtitleColor ?? this.subtitleColor,
       dotColorVal: dotColor ?? this.dotColor,

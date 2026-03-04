@@ -466,7 +466,7 @@ class _SkinDropdownRow extends StatelessWidget {
     return Row(
       children: [
         // 色彩预览点（3色）
-        _ColorDot(color: resolvedSkin.medium, size: 18),
+        _ColorDot(color: resolvedSkin.basic, size: 18),
         const SizedBox(width: 5),
         _ColorDot(color: resolvedSkin.light, size: 13),
         const SizedBox(width: 5),

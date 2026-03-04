@@ -45,7 +45,7 @@ class _ConfirmButtonState extends State<ConfirmButton> {
   @override
   Widget build(BuildContext context) {
     final skin = Theme.of(context).extension<AppTheme>();
-    final baseColor = skin?.medium ?? UiColors.grey500;
+    final baseColor = skin?.basic ?? UiColors.grey500;
 
     // 确定背景色
     Color buttonColor;

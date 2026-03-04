@@ -82,7 +82,7 @@ class _ScoreSyncModeTabsState extends State<ScoreSyncModeTabs>
   @override
   Widget build(BuildContext context) {
     final skin = Theme.of(context).extension<AppTheme>();
-    final Color activeColor = skin?.medium ?? UiColors.grey500;
+    final Color activeColor = skin?.basic ?? UiColors.grey500;
 
     return IgnorePointer(
       ignoring: widget.isDisabled,
