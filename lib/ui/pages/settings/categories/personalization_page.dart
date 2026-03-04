@@ -76,11 +76,15 @@ class _SkinSelectorAssemblyState extends State<SkinSelectorAssembly> {
 
   // ── 皮肤分类（独立模式过滤源）
   static List<AppTheme> get _maiSkins => ThemeCatalog.allThemes
-      .where((s) => s.themeId == 'star_trails' || s.themeId == 'mai_circle')
+      .where(
+        (s) => s.themeId == 'star_trails' || s.domain == ThemeDomain.maimai,
+      )
       .toList();
 
   static List<AppTheme> get _chuSkins => ThemeCatalog.allThemes
-      .where((s) => s.themeId == 'star_trails' || s.themeId == 'chu_verse')
+      .where(
+        (s) => s.themeId == 'star_trails' || s.domain == ThemeDomain.chunithm,
+      )
       .toList();
 
   // ── 20s auto-close 回调

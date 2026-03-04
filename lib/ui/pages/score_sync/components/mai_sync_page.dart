@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../application/shared/game_provider.dart';
 import '../../../design_system/constants/assets.dart';
 import 'score_sync_logo_wrapper.dart';
 import 'score_sync_assembly.dart';
@@ -15,8 +17,14 @@ class MaiSyncPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gp = context.watch<GameProvider>();
+    final skinId = gp.isThemeGlobal ? gp.activeSkinId : gp.maiSkinId;
+    final logoPath = skinId == 'mai_dx'
+        ? AppAssets.logoMaimaiDx
+        : AppAssets.logoMaimai;
+
     return ScoreSyncLogoWrapper(
-      logoPath: AppAssets.logoMaimai,
+      logoPath: logoPath,
       subtitle: 'MaiMai DX Prober',
       child: ScoreSyncAssembly(
         key: const ValueKey('ScoreSyncAssembly_Mai'),

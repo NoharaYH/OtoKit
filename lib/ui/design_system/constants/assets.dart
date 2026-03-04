@@ -29,6 +29,7 @@ class AppAssets {
 
   // Logos
   static const String logoMaimai = 'assets/logo/circle.webp';
+  static const String logoMaimaiDx = 'assets/logo/maimaidx.webp';
   static const String logoChunithm = 'assets/logo/verse.webp';
 
   // Maimai Difficulties

@@ -295,6 +295,8 @@ class _MiniPreview extends StatelessWidget {
       switch (skin.themeId) {
         case 'mai_circle':
           return AppAssets.logoMaimai;
+        case 'mai_dx':
+          return AppAssets.logoMaimaiDx;
         case 'chu_verse':
           return AppAssets.logoChunithm;
         default:

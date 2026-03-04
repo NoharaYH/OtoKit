@@ -88,7 +88,9 @@ class _MusicDataPageState extends State<MusicDataPage> {
           skin: maiSkin,
           title: 'Maimai DX',
           content: ScoreSyncLogoWrapper(
-            logoPath: AppAssets.logoMaimai,
+            logoPath: maiSkin.themeId == 'mai_dx'
+                ? AppAssets.logoMaimaiDx
+                : AppAssets.logoMaimai,
             subtitle: 'MUSIC LIBRARY',
             themeColor: maiSkin.basic,
             child: const MaiMusicAssembly(),
