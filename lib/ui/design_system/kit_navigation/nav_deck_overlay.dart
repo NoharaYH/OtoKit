@@ -114,12 +114,14 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
         icon: Icons.sync,
         subLabel: 'score data sync',
         label: UiStrings.navScoreSync,
+        customColor: Colors.green,
       ),
       _CapsuleItemData(
         tag: PageTag.musicData,
         icon: Icons.library_music,
         subLabel: 'music data base',
         label: UiStrings.navMusicData,
+        customColor: Colors.blue,
       ),
       // 预留的无功能占位卡
       _CapsuleItemData(
@@ -169,6 +171,7 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
                 icon: items[i].icon,
                 subLabel: items[i].subLabel,
                 label: items[i].label,
+                customColor: items[i].customColor,
                 // 如果是假卡，不产生高亮
                 isSelected:
                     items[i].tag != null && nav.currentTag == items[i].tag,
@@ -264,11 +267,13 @@ class _CapsuleItemData {
   final IconData icon;
   final String label;
   final String subLabel;
+  final Color? customColor;
 
   _CapsuleItemData({
     required this.tag,
     required this.icon,
     required this.label,
     required this.subLabel,
+    this.customColor,
   });
 }

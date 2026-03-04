@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import '../constants/colors.dart';
-import '../theme/core/app_theme.dart';
 import '../constants/animations.dart';
 
 class KitNavCapsule extends StatefulWidget {
@@ -10,6 +9,7 @@ class KitNavCapsule extends StatefulWidget {
   final VoidCallback onTap;
   final bool isSelected;
   final bool isCircle;
+  final Color? customColor;
 
   const KitNavCapsule({
     required this.icon,
@@ -18,6 +18,7 @@ class KitNavCapsule extends StatefulWidget {
     required this.onTap,
     this.isSelected = false,
     this.isCircle = false,
+    this.customColor,
     super.key,
   });
 
@@ -43,15 +44,11 @@ class _KitNavCapsuleState extends State<KitNavCapsule> {
 
   @override
   Widget build(BuildContext context) {
-    // 由于 NavDeckOverlay 在 RootPage 层，其 context 可能尚未被 KitGameCarousel 注入 AppTheme
-    // 所以我们需要做安全的 null 处理，并提供 fallback 颜色
-    final skin = Theme.of(context).extension<AppTheme>();
-
+    // 根据架构锁死特例要求：直接剥弃一切动态的 Theme 获取，进行静态硬编码回退锁定
     final bgColor = UiColors.white;
 
-    // Define colors, providing fallbacks if skin is not available
-    final Color basicColor = skin?.basic ?? UiColors.grey500;
-    final Color darkColor = skin?.dark ?? UiColors.grey800;
+    final Color basicColor = widget.customColor ?? UiColors.grey500;
+    final Color darkColor = widget.customColor ?? UiColors.grey800;
 
     final contentColor = widget.isSelected
         ? basicColor
