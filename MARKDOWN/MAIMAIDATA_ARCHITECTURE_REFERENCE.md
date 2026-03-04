@@ -309,3 +309,94 @@ class KitCoverImage extends StatelessWidget {
   }
 ]
 ```
+
+---
+
+## 7. 宴会场 (Utage) 曲目专项结构
+
+宴曲 (genre == `"宴会場"`) 在数据结构上与普通歌曲存在根本差异，`MaiTransformer` 已通过 `isUtage` 标记对其进行隔离处理。
+
+### 7.1 差异说明
+
+| 属性                | 普通曲目                       | 宴曲                    |
+| ------------------- | ------------------------------ | ----------------------- |
+| `charts` 数量       | 1 ~ 5 张（Basic 到 Re:Master） | 1 ~ 2 张                |
+| `charts` 语义       | 难度分层                       | 玩家角色分层（1P / 2P） |
+| `label`             | `Basic` / `Advanced` ...       | `Utage` / `Utage 2P`    |
+| `is_utage`          | `false`                        | `true`                  |
+| 是否有 `touch` note | DX 谱才有                      | 通常有，但结构不稳定    |
+
+### 7.2 宴曲 `MaiSongRow` 行结构示例
+
+单人宴曲（只有 1P 谱面）：
+
+```json
+{
+  "id": 70040,
+  "title": "好き！雪！本気マジック",
+  "artist": "北島三郎 × HoneyWorks",
+  "bpm": 155,
+  "type": "SD",
+  "genre": "宴会場",
+  "version_text": "maimai でらっくす",
+  "version_id": 19000,
+  "charts_json": "[{\"difficulty\":0,\"label\":\"Utage\",\"level\":\"宴\",\"constant\":0.0,\"designer\":\"---\",\"tap\":312,\"hold\":28,\"slide\":14,\"touch\":0,\"break\":6,\"total\":360,\"is_utage\":true}]"
+}
+```
+
+双人协演宴曲（含 2P 谱面）：
+
+```json
+{
+  "id": 70130,
+  "title": "進め！むてんかへ!!(でらっくす版)",
+  "artist": "ノーポイッ!",
+  "bpm": 168,
+  "type": "SD",
+  "genre": "宴会場",
+  "version_text": "maimai でらっくす",
+  "version_id": 19000,
+  "charts_json": "[{\"difficulty\":0,\"label\":\"Utage\",\"level\":\"宴\",\"constant\":0.0,\"designer\":\"---\",\"tap\":288,\"hold\":22,\"slide\":18,\"touch\":0,\"break\":8,\"total\":336,\"is_utage\":true},{\"difficulty\":1,\"label\":\"Utage 2P\",\"level\":\"宴\",\"constant\":0.0,\"designer\":\"---\",\"tap\":276,\"hold\":20,\"slide\":16,\"touch\":0,\"break\":6,\"total\":318,\"is_utage\":true}]"
+}
+```
+
+`charts_json` 展开后：
+
+```json
+[
+  {
+    "difficulty": 0,
+    "label": "Utage",
+    "level": "宴",
+    "constant": 0.0,
+    "designer": "---",
+    "tap": 288,
+    "hold": 22,
+    "slide": 18,
+    "touch": 0,
+    "break": 8,
+    "total": 336,
+    "is_utage": true
+  },
+  {
+    "difficulty": 1,
+    "label": "Utage 2P",
+    "level": "宴",
+    "constant": 0.0,
+    "designer": "---",
+    "tap": 276,
+    "hold": 20,
+    "slide": 16,
+    "touch": 0,
+    "break": 6,
+    "total": 318,
+    "is_utage": true
+  }
+]
+```
+
+### 7.3 UI 层消费规程
+
+- 通过顶层 `genre == '宴会場'` 字段在 SQLite 进行一次性过滤，无需解析 `chartsJson`。
+- 展示宴曲卡片时，ONLY 读取 `charts_json` 内的 `is_utage: true` 条目，不得将其混入普通难度选择列表。
+- `Utage 2P` 条目应当仅在"双人协演"模式 label 下显示，REJECT 与 1P 谱面并排显示在同一难度栏上。
