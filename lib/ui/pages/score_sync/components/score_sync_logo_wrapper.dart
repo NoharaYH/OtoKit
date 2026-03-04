@@ -36,15 +36,14 @@ class ScoreSyncLogoWrapper extends StatelessWidget {
                   child: Builder(
                     builder: (context) {
                       final skin = Theme.of(context).extension<AppTheme>();
-                      final color =
-                          skin?.subtitleColor ?? themeColor ?? Colors.blue;
+                      final color = skin?.light ?? themeColor ?? Colors.blue;
                       return Text(
                         subtitle,
                         style: TextStyle(
                           fontFamily: 'GameFont',
                           fontSize: 34,
                           fontWeight: FontWeight.normal,
-                          color: color.withValues(alpha: 0.2),
+                          color: color.withValues(alpha: 0.6),
                           letterSpacing: -1.0,
                         ),
                       );

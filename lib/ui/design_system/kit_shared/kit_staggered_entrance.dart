@@ -7,12 +7,14 @@ class KitStaggeredEntrance extends StatefulWidget {
   final Widget child;
   final int index;
   final Duration? delay;
+  final Duration? duration;
 
   const KitStaggeredEntrance({
     super.key,
     required this.child,
     required this.index,
     this.delay,
+    this.duration,
   });
 
   @override
@@ -30,7 +32,7 @@ class _KitStaggeredEntranceState extends State<KitStaggeredEntrance>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: KitAnimationEngine.expandDuration,
+      duration: widget.duration ?? KitAnimationEngine.expandDuration,
     );
 
     // 透明度渐变：在动画的前 60% 完成

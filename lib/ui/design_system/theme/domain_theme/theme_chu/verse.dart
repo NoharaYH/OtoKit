@@ -16,13 +16,13 @@ class VerseTheme extends AppTheme {
   String get themeId => 'chu_verse';
 
   @override
-  Color get light => const Color.fromARGB(255, 165, 208, 255);
+  Color get light => const Color(0xFFDBEFFF);
 
   @override
   Color get basic => const Color.fromARGB(255, 111, 140, 255);
 
   @override
-  Color get dark => const Color.fromARGB(255, 0, 98, 255);
+  Color get dark => const Color(0xFF333333);
 
   @override
   Color get subtitleColor => basic;

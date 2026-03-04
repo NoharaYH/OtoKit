@@ -17,13 +17,13 @@ class StarTrailsTheme extends AppTheme {
   String get themeId => 'star_trails';
 
   @override
-  Color get light => const Color(0xFF1A4FBD);
+  Color get light => const Color.fromARGB(255, 243, 247, 255);
 
   @override
   Color get basic => const Color(0xFF6A1EBD);
 
   @override
-  Color get dark => const Color(0xFF05080A); // 已满足 <= #2D2D2D 兜底，或在内部提供
+  Color get dark => const Color(0xFF333333);
 
   @override
   Color get subtitleColor => Colors.white;
@@ -96,12 +96,13 @@ class _StarBackgroundState extends State<_StarBackground>
   }
 
   List<_AuroraBlobDNA> _generateBlobDNA() {
+    final hsl = HSLColor.fromColor(widget.basicColor);
     final coreColors = [
       widget.lightColor,
       widget.basicColor,
-      const Color(0xFF0891B2),
-      const Color(0xFFDB2777),
-      const Color(0xFF4F46E5),
+      hsl.withHue((hsl.hue + 45) % 360).toColor(),
+      hsl.withHue((hsl.hue - 45) % 360).toColor(),
+      hsl.withHue((hsl.hue + 90) % 360).toColor(),
       widget.lightColor.withValues(alpha: 0.8),
     ];
 
@@ -129,10 +130,13 @@ class _StarBackgroundState extends State<_StarBackground>
 
   @override
   Widget build(BuildContext context) {
+    final deepSpace = Color.lerp(widget.basicColor, Colors.black, 0.85)!;
+    final bottomGlow = Color.lerp(widget.basicColor, Colors.black, 0.6)!;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        Container(color: widget.darkColor),
+        Container(color: deepSpace),
         Positioned.fill(
           child: ImageFiltered(
             imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -170,10 +174,7 @@ class _StarBackgroundState extends State<_StarBackground>
               gradient: RadialGradient(
                 center: Alignment.bottomRight,
                 radius: 1.5,
-                colors: [
-                  Colors.transparent,
-                  widget.darkColor.withValues(alpha: 0.7),
-                ],
+                colors: [Colors.transparent, bottomGlow.withValues(alpha: 0.7)],
                 stops: const [0.3, 1.0],
               ),
             ),

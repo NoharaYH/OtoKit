@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../application/shared/game_provider.dart';
 import '../../design_system/constants/colors.dart';
-import '../../design_system/constants/animations.dart';
 import '../../design_system/kit_shared/kit_staggered_entrance.dart';
 import '../../../application/shared/navigation_provider.dart';
 import '../../design_system/kit_setting/setting_header.dart';
@@ -75,7 +74,7 @@ class _SettingsPageState extends State<SettingsPage>
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: UiAnimations.standard,
+      duration: const Duration(milliseconds: 200),
     );
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
@@ -393,6 +392,8 @@ class _SettingsPageState extends State<SettingsPage>
             padding: const EdgeInsets.only(bottom: 12),
             child: KitStaggeredEntrance(
               index: index + 1,
+              duration: const Duration(milliseconds: 300),
+              delay: Duration(milliseconds: index * 40),
               child: SettingTile(
                 icon: cat.icon,
                 title: cat.title,

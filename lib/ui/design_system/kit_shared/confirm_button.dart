@@ -19,6 +19,7 @@ class ConfirmButton extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final double fontSize;
   final double? borderRadius;
+  final bool showDisabledMask;
 
   const ConfirmButton({
     super.key,
@@ -31,6 +32,7 @@ class ConfirmButton extends StatefulWidget {
     this.padding,
     this.fontSize = 14,
     this.borderRadius,
+    this.showDisabledMask = true,
   });
 
   @override
@@ -60,7 +62,9 @@ class _ConfirmButtonState extends State<ConfirmButton> {
     }
 
     final bool isDisabled =
-        widget.state == ConfirmButtonState.disabled || widget.onPressed == null;
+        (widget.state == ConfirmButtonState.disabled ||
+            widget.onPressed == null) &&
+        widget.showDisabledMask;
 
     if (widget.state == ConfirmButtonState.hidden) {
       return const SizedBox.shrink();
@@ -69,71 +73,79 @@ class _ConfirmButtonState extends State<ConfirmButton> {
     return KitBounceScaler(
       onTap: _isInteractive ? widget.onPressed : null,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: UiAnimations.fast,
-        width: widget.width,
-        height:
-            widget.height ??
-            (widget.padding == null ? UiSizes.inputFieldHeight : null),
-        padding:
-            widget.padding ??
-            (widget.height == null
-                ? const EdgeInsets.symmetric(horizontal: 16)
-                : null),
-        decoration: BoxDecoration(
-          color: buttonColor,
-          borderRadius: BorderRadius.circular(
-            widget.borderRadius ?? UiSizes.buttonRadius,
-          ),
-          boxShadow: null,
-        ),
-        foregroundDecoration: isDisabled
-            ? BoxDecoration(
-                color: UiColors.disabledMask,
-                borderRadius: BorderRadius.circular(
-                  widget.borderRadius ?? UiSizes.buttonRadius,
-                ),
-              )
-            : null,
-        child: Center(
-          child: AnimatedSwitcher(
+      child: Stack(
+        children: [
+          AnimatedContainer(
             duration: UiAnimations.fast,
-            child: showLoading
-                ? SizedBox(
-                    key: const ValueKey('loading'),
-                    width: widget.fontSize * 1.5,
-                    height: widget.fontSize * 1.5,
-                    child: const CircularProgressIndicator(
-                      color: UiColors.white,
-                      strokeWidth: 3, // 稍微加粗，更醒目
-                    ),
-                  )
-                : Row(
-                    key: const ValueKey('content'),
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(
-                          widget.icon,
+            width: widget.width,
+            height:
+                widget.height ??
+                (widget.padding == null ? UiSizes.inputFieldHeight : null),
+            padding:
+                widget.padding ??
+                (widget.height == null
+                    ? const EdgeInsets.symmetric(horizontal: 16)
+                    : null),
+            decoration: BoxDecoration(
+              color: buttonColor,
+              borderRadius: BorderRadius.circular(
+                widget.borderRadius ?? UiSizes.buttonRadius,
+              ),
+              boxShadow: null,
+            ),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: UiAnimations.fast,
+                child: showLoading
+                    ? SizedBox(
+                        key: const ValueKey('loading'),
+                        width: widget.fontSize * 1.5,
+                        height: widget.fontSize * 1.5,
+                        child: const CircularProgressIndicator(
                           color: UiColors.white,
-                          size: widget.fontSize * 1.2,
+                          strokeWidth: 3,
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        widget.text,
-                        style: TextStyle(
-                          color: UiColors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: widget.fontSize,
-                          letterSpacing: 0.5,
-                        ),
+                      )
+                    : Row(
+                        key: const ValueKey('content'),
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(
+                              widget.icon,
+                              color: UiColors.white,
+                              size: widget.fontSize * 1.2,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            widget.text,
+                            style: TextStyle(
+                              color: UiColors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: widget.fontSize,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+              ),
+            ),
           ),
-        ),
+          if (isDisabled)
+            Positioned.fill(
+              child: AnimatedContainer(
+                duration: UiAnimations.fast,
+                decoration: BoxDecoration(
+                  color: UiColors.disabledMask,
+                  borderRadius: BorderRadius.circular(
+                    widget.borderRadius ?? UiSizes.buttonRadius,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

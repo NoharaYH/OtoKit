@@ -279,7 +279,7 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         Consumer<NavigationProvider>(
           builder: (context, nav, child) {
             return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 200),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               child: nav.isSettingsOpen

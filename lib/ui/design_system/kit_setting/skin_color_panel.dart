@@ -365,17 +365,27 @@ class _MiniPreview extends StatelessWidget {
                                     ),
                                     child: BackdropFilter(
                                       filter: ImageFilter.blur(
-                                        sigmaX: 12,
-                                        sigmaY: 12,
+                                        sigmaX: 12.0,
+                                        sigmaY: 12.0,
                                       ),
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.25,
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Colors.white.withValues(
+                                                alpha: 0.40,
+                                              ),
+                                              Colors.white.withValues(
+                                                alpha: 0.10,
+                                              ),
+                                            ],
+                                            stops: const [0.0, 1.0],
                                           ),
                                           border: Border.all(
                                             color: Colors.white.withValues(
-                                              alpha: 0.2,
+                                              alpha: 0.35,
                                             ),
                                             width: 0.5,
                                           ),
@@ -419,7 +429,7 @@ class _MiniPreview extends StatelessWidget {
                                                     fontWeight:
                                                         FontWeight.normal,
                                                     color: dynamicSkin.light
-                                                        .withValues(alpha: 0.2),
+                                                        .withValues(alpha: 0.6),
                                                     letterSpacing: -1.0,
                                                   ),
                                                 ),
@@ -551,33 +561,37 @@ class _MiniPreview extends StatelessWidget {
                                               ),
                                             ],
                                           ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal:
-                                                UiSizes.cardContentPadding,
-                                            vertical:
+                                          padding: const EdgeInsets.only(
+                                            left: UiSizes.cardContentPadding,
+                                            right: UiSizes.cardContentPadding,
+                                            top:
                                                 UiSizes.atomicComponentGap +
-                                                8.0, // 增加垂直高度
+                                                12.0,
+                                            bottom: UiSizes
+                                                .cardContentPadding, // 下边缘与两侧边距相等
                                           ),
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.stretch,
                                             children: [
-                                              // 上方：文字色绑定 dark
-                                              Text(
-                                                '颜色测试',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: dark,
+                                              // 上方：居中并大幅放大的测试文字 (放大100% -> 32)
+                                              SizedBox(
+                                                height: 72,
+                                                child: Center(
+                                                  child: Text(
+                                                    '颜色测试',
+                                                    style: TextStyle(
+                                                      fontSize: 32,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: dark,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                              const SizedBox(
-                                                height:
-                                                    UiSizes.atomicComponentGap +
-                                                    12.0,
-                                              ), // 增加间距以提升高度
-                                              // 下方：两个标准按钮，basic 通过 Theme 自动注入
+                                              const SizedBox(height: 12.0),
+                                              // 下方：两个标准按钮
                                               Row(
                                                 children: [
                                                   Expanded(
@@ -585,6 +599,9 @@ class _MiniPreview extends StatelessWidget {
                                                       text: '确认',
                                                       state: ConfirmButtonState
                                                           .ready,
+                                                      fontSize:
+                                                          28, // 放大约100% (14->28)
+                                                      showDisabledMask: false,
                                                     ),
                                                   ),
                                                   const SizedBox(
@@ -596,6 +613,9 @@ class _MiniPreview extends StatelessWidget {
                                                       text: '取消',
                                                       state: ConfirmButtonState
                                                           .disabled,
+                                                      fontSize:
+                                                          28, // 放大约100% (14->28)
+                                                      showDisabledMask: false,
                                                     ),
                                                   ),
                                                 ],
@@ -642,7 +662,7 @@ class _Dot extends StatelessWidget {
     }
     return Container(
       width: active ? 10 : 4,
-      height: 3,
+      height: 4,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(2),
@@ -665,13 +685,13 @@ class _PreviewActionCircle extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.2),
-            blurRadius: 6.0,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: color.withValues(alpha: 0.2),
+        //     blurRadius: 6.0,
+        //     offset: const Offset(0, 3),
+        //   ),
+        // ],
       ),
       alignment: Alignment.center,
       child: Icon(icon, color: color, size: 20),

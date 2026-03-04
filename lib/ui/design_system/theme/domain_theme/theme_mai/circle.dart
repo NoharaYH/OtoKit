@@ -16,7 +16,7 @@ class CircleTheme extends AppTheme {
   String get themeId => 'mai_circle';
 
   @override
-  Color get light => const Color(0xFFFFB7CD);
+  Color get light => const Color.fromARGB(255, 255, 226, 234);
 
   @override
   Color get basic => const Color.fromARGB(255, 255, 84, 138);
@@ -24,7 +24,7 @@ class CircleTheme extends AppTheme {
   // 严格遵循兜底规范，如果需要特定暗色可返回，但如果是文字色可能会被外部强制转为 #2d2d2d，
   // 视具体的渲染处而定，或者统一约束为不超过 #2d2d2d 的色域。
   @override
-  Color get dark => const Color.fromARGB(255, 239, 9, 109);
+  Color get dark => const Color(0xFF333333);
 
   @override
   Color get subtitleColor => basic;
@@ -42,7 +42,8 @@ class CircleTheme extends AppTheme {
             gradient: RadialGradient(
               center: Alignment.center,
               radius: 1.0,
-              colors: [light, dark],
+              // 背景渐变使用品牌固定色，不受 dark/light token 影响
+              colors: [const Color(0xFFFFB7CD), const Color(0xFFEF096D)],
             ),
           ),
         ),
