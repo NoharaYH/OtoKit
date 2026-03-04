@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../logic/mai_music_data/library/mai_library.dart';
 import '../../logic/mai_music_data/data_sync/mai_sync_handler.dart';
 import '../../logic/mai_music_data/data_formats/mai_music.dart';
+import '../../logic/mai_music_data/data_formats/mai_song_row.dart';
 
 class MaiMusicProvider extends ChangeNotifier {
   final MaiLibrary _library = MaiLibrary();
@@ -37,7 +38,8 @@ class MaiMusicProvider extends ChangeNotifier {
     try {
       final newSongs = await _syncHandler.performSync(force: true);
       if (newSongs != null) {
-        await _library.updateAndPersist(newSongs);
+        // TODO(SQLite): 将 newSongs (List<MaiSongRow>) 写入 DAO 批量插入 SQLite
+        // await _maiMusicDao.batchInsert(newSongs);
       }
     } finally {
       _isLoading = false;
