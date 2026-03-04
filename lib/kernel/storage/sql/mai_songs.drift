@@ -1,0 +1,62 @@
+-- Maimai 歌曲数据库核心 SQL 定义
+
+-- 1. 普通歌曲表
+CREATE TABLE mai_music_data (
+    id           INTEGER  NOT NULL PRIMARY KEY,
+    title        TEXT     NOT NULL,
+    artist       TEXT     NOT NULL,
+    bpm          INTEGER  NOT NULL,
+    type         TEXT     NOT NULL,              -- 'SD' | 'DX'
+    genre        TEXT     NOT NULL,
+    version_text TEXT     NOT NULL,
+    version_id   INTEGER  NOT NULL,
+    charts_json  TEXT     NOT NULL               -- JSON 文本存储谱面集合
+);
+
+-- 2. 宴会场专项表
+CREATE TABLE mai_utage_data (
+    id           INTEGER  NOT NULL PRIMARY KEY,
+    title        TEXT     NOT NULL,
+    artist       TEXT     NOT NULL,
+    bpm          INTEGER  NOT NULL,
+    type         TEXT     NOT NULL,
+    version_text TEXT     NOT NULL,
+    version_id   INTEGER  NOT NULL,
+    is_buddy     BOOLEAN  NOT NULL DEFAULT 0,    -- 协演标记
+    charts_json  TEXT     NOT NULL
+);
+
+-- 3. 高性能索引
+CREATE INDEX IF NOT EXISTS idx_mai_music_version  ON mai_music_data (version_id);
+CREATE INDEX IF NOT EXISTS idx_mai_music_genre    ON mai_music_data (genre);
+CREATE INDEX IF NOT EXISTS idx_mai_music_title    ON mai_music_data (title);
+CREATE INDEX IF NOT EXISTS idx_mai_utage_title    ON mai_utage_data (title);
+
+-- 4. 业务深度搜索 SQL (利用 SQLite JSON 扩展)
+
+-- 全功能过滤搜索：支持标题、流派、以及"谱面定数范围"的交叉筛选
+-- 即使谱面被压缩在 JSON 列里，依然可以通过 json_each 在数据库层实现 O(1) 过滤
+searchSongsWithFilter:
+    SELECT * FROM mai_music_data
+    WHERE (:keyword IS NULL OR title LIKE '%' || :keyword || '%')
+      AND (:genre IS NULL OR genre = :genre)
+      AND (:minDs IS NULL OR EXISTS (
+          SELECT 1 FROM json_each(charts_json)
+          WHERE CAST(json_extract(value, '$.constant') AS REAL) >= :minDs
+      ))
+      AND (:maxDs IS NULL OR EXISTS (
+          SELECT 1 FROM json_each(charts_json)
+          WHERE CAST(json_extract(value, '$.constant') AS REAL) <= :maxDs
+      ))
+    ORDER BY id ASC;
+
+-- 快速获取所有流派列表 (用于 UI 筛选器)
+getGenres:
+    SELECT DISTINCT genre FROM mai_music_data ORDER BY genre;
+
+-- 统计各版本曲目分布
+getVersionStats:
+    SELECT version_text, COUNT(*) as count 
+    FROM mai_music_data 
+    GROUP BY version_text 
+    ORDER BY version_id DESC;
