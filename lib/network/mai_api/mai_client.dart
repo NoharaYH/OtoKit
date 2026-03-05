@@ -13,15 +13,15 @@ class MaiClient {
 
   /// 获取游戏版本元数据（用于指纹校验）
   Future<List<dynamic>> fetchVersions() async {
-    final response = await _dio.get(lxnsMetadataUrl);
-    if (response.statusCode != 200) {
-      throw DioException(
-        requestOptions: response.requestOptions,
-        response: response,
-        message: 'LXNS Version API error: ${response.statusCode}',
-      );
+    try {
+      final response = await _dio.get(lxnsMetadataUrl);
+      if (response.statusCode == 200) {
+        return response.data['data'] ?? [];
+      }
+    } catch (e) {
+      // 容忍指纹接口失败
     }
-    return response.data['data'] ?? [];
+    return [];
   }
 
   /// 获取水鱼原始数据
@@ -39,7 +39,11 @@ class MaiClient {
 
   /// 获取落雪原始数据
   Future<List<dynamic>> fetchLxnsRaw() async {
-    final response = await _dio.get(lxnsUrl);
+    final response = await _dio.get(
+      lxnsUrl,
+      options: Options(headers: {'version': '25000', 'notes': 'false'}),
+      queryParameters: {'version': 25000, 'notes': false},
+    );
     if (response.statusCode != 200) {
       throw DioException(
         requestOptions: response.requestOptions,

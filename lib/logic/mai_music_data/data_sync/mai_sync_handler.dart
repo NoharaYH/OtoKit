@@ -65,11 +65,7 @@ class MaiSyncHandler {
       // 4. Transformer 全程在独立 Isolate 内运行
       onPhaseChanged?.call(SyncPhase.merging);
       final List<MaiSongRow> rows = await Isolate.run(() async {
-        return await MaiTransformer.transform(
-          dfRaw,
-          lxRaw,
-          onProgress: onProgress,
-        );
+        return await MaiTransformer.transform(dfRaw, lxRaw);
       });
 
       // 5. 同步成功后，更新本地指纹

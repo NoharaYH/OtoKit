@@ -39,7 +39,7 @@ class MaiTransformer {
       final int id = int.tryParse(dfSong['id']?.toString() ?? '') ?? 0;
       final lxSong = lxMap[id];
 
-      // 双源均有记录方可合并，否则跳过 (目前逻辑强依赖双端)
+      // 双源均有记录方可合并，否则跳过 (逻辑强依赖双端)
       if (lxSong == null) continue;
 
       final List<dynamic> dfCharts = dfSong['charts'] ?? [];
