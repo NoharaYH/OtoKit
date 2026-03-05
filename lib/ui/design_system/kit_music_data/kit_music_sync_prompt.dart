@@ -1,7 +1,7 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
-import '../../../../logic/mai_music_data/data_sync/mai_sync_handler.dart';
+import '../../../../logic/mai_music_data/data_sync/mai_oss_sync_handler.dart';
 import '../theme/core/app_theme.dart';
 import '../constants/sizes.dart';
 import '../constants/strings.dart';
@@ -65,7 +65,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
 
     // Detect phase transition from pulling to merging for the typing effect
     if (oldWidget.phase == SyncPhase.pulling &&
-        widget.phase == SyncPhase.merging) {
+        widget.phase == SyncPhase.writing) {
       _startTypingEffect();
     }
   }
@@ -217,7 +217,7 @@ class _KitMusicSyncPromptState extends State<KitMusicSyncPrompt> {
     if (widget.phase == SyncPhase.pulling) {
       leftText = UiStrings.pullMusicData;
       progressValue = 0.0;
-    } else if (widget.phase == SyncPhase.merging) {
+    } else if (widget.phase == SyncPhase.writing) {
       if (_isTyping) {
         leftText = '${UiStrings.pullMusicData}$_typedText';
         progressValue = 0.0;

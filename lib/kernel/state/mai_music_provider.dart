@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../di/injection.dart';
 import '../storage/sql/daos/mai_music_dao.dart';
-import '../../logic/mai_music_data/data_sync/mai_sync_handler.dart';
+import '../../logic/mai_music_data/data_sync/mai_oss_sync_handler.dart';
 import '../../logic/mai_music_data/data_formats/mai_music.dart';
 import '../../logic/mai_music_data/transform/mai_db_mapper.dart';
 
 class MaiMusicProvider extends ChangeNotifier {
-  final _syncHandler = MaiSyncHandler();
+  final _syncHandler = MaiOssSyncHandler();
   final _maiMusicDao = getIt<MaiMusicDao>();
 
   StreamSubscription? _musicSubscription;
@@ -42,14 +42,14 @@ class MaiMusicProvider extends ChangeNotifier {
     });
   }
 
-  /// 手动执行同步
+  /// 从 OSS 拉取曲库 JSON 并批量写入 SQLite
   Future<void> sync() async {
     if (_isLoading) return;
     _isLoading = true;
     notifyListeners();
 
     try {
-      final newSongs = await _syncHandler.performSync(force: true);
+      final newSongs = await _syncHandler.performSync();
       if (newSongs != null) {
         await _maiMusicDao.batchInsert(newSongs);
       }
