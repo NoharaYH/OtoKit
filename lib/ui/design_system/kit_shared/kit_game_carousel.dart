@@ -61,16 +61,23 @@ class KitGameCarousel extends StatelessWidget {
 
         // 3. 内容层 (具备挤压动效的 PageView)
         Positioned.fill(
-          child: PageView.builder(
-            controller: controller,
-            onPageChanged: onPageChanged,
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              return AnimatedBuilder(
-                animation: controller,
-                builder: (context, _) => _buildParallaxPage(context, index),
-              );
-            },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Container(
+              color: Colors.transparent,
+              child: PageView.builder(
+                controller: controller,
+                onPageChanged: onPageChanged,
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  return AnimatedBuilder(
+                    animation: controller,
+                    builder: (context, _) => _buildParallaxPage(context, index),
+                  );
+                },
+              ),
+            ),
           ),
         ),
 

@@ -10,6 +10,7 @@ import '../../design_system/constants/assets.dart';
 import '../../design_system/kit_shared/kit_game_carousel.dart';
 import '../../design_system/kit_shared/game_page_item.dart';
 import '../../design_system/theme/theme_catalog.dart';
+import '../../design_system/theme/special_theme/utage.dart';
 
 import '../score_sync/components/score_sync_logo_wrapper.dart';
 
@@ -60,7 +61,7 @@ class _MusicDataPageState extends State<MusicDataPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 监听全局游戏类型变化，但使用本地控制器渲染
+    final maiMusicProvider = context.watch<MaiMusicProvider>();
     final gameProvider = context.watch<GameProvider>();
 
     final maiSkinId = gameProvider.isThemeGlobal
@@ -70,9 +71,9 @@ class _MusicDataPageState extends State<MusicDataPage> {
         ? gameProvider.activeSkinId
         : gameProvider.chuSkinId;
 
-    final maiSkin = gameProvider.resolvedTheme(
-      ThemeCatalog.findThemeById(maiSkinId),
-    );
+    final maiSkin = maiMusicProvider.isUtageMode
+        ? const UtageTheme()
+        : gameProvider.resolvedTheme(ThemeCatalog.findThemeById(maiSkinId));
     final chuSkin = gameProvider.resolvedTheme(
       ThemeCatalog.findThemeById(chuSkinId),
     );
@@ -88,10 +89,14 @@ class _MusicDataPageState extends State<MusicDataPage> {
           skin: maiSkin,
           title: 'Maimai DX',
           content: ScoreSyncLogoWrapper(
-            logoPath: maiSkin.themeId == 'mai_dx'
-                ? AppAssets.logoMaimaiDx
-                : AppAssets.logoMaimai,
-            subtitle: 'MUSIC LIBRARY',
+            logoPath: maiMusicProvider.isUtageMode
+                ? AppAssets.logoUtage
+                : (maiSkin.themeId == 'mai_dx'
+                      ? AppAssets.logoMaimaiDx
+                      : AppAssets.logoMaimai),
+            subtitle: maiMusicProvider.isUtageMode
+                ? 'UTAGE LIBRARY'
+                : 'MUSIC LIBRARY',
             themeColor: maiSkin.basic,
             child: const MaiMusicAssembly(),
           ),

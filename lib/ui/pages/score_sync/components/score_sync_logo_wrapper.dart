@@ -37,14 +37,18 @@ class ScoreSyncLogoWrapper extends StatelessWidget {
                     builder: (context) {
                       final skin = Theme.of(context).extension<AppTheme>();
                       final color = skin?.light ?? themeColor ?? Colors.blue;
-                      return Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontFamily: 'GameFont',
-                          fontSize: 34,
-                          fontWeight: FontWeight.normal,
-                          color: color.withValues(alpha: 0.6),
-                          letterSpacing: -1.0,
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          subtitle,
+                          key: ValueKey(subtitle),
+                          style: TextStyle(
+                            fontFamily: 'GameFont',
+                            fontSize: 34,
+                            fontWeight: FontWeight.normal,
+                            color: color.withValues(alpha: 0.6),
+                            letterSpacing: -1.0,
+                          ),
                         ),
                       );
                     },
@@ -53,11 +57,15 @@ class ScoreSyncLogoWrapper extends StatelessWidget {
                 // Logo Image (In Front)
                 Align(
                   alignment: Alignment.center,
-                  child: Image.asset(
-                    logoPath,
-                    height: UiSizes.logoHeight,
-                    width: UiSizes.logoWidth,
-                    fit: BoxFit.contain,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: Image.asset(
+                      logoPath,
+                      key: ValueKey(logoPath),
+                      height: UiSizes.logoHeight,
+                      width: UiSizes.logoWidth,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ],

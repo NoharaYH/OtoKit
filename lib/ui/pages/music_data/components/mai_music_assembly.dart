@@ -3,11 +3,20 @@ import 'package:provider/provider.dart';
 import '../../../design_system/constants/colors.dart';
 import '../../../../application/mai/mai_music_provider.dart';
 import '../../../design_system/constants/sizes.dart';
+import '../../../design_system/kit_music_data/kit_music_search_bar.dart';
+import '../../../design_system/kit_music_data/kit_music_category_filter.dart';
 import '../../../design_system/kit_music_data/kit_music_sync_prompt.dart';
 import '../../../design_system/constants/strings.dart';
 
-class MaiMusicAssembly extends StatelessWidget {
+class MaiMusicAssembly extends StatefulWidget {
   const MaiMusicAssembly({super.key});
+
+  @override
+  State<MaiMusicAssembly> createState() => _MaiMusicAssemblyState();
+}
+
+class _MaiMusicAssemblyState extends State<MaiMusicAssembly> {
+  bool _advancedExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +38,28 @@ class MaiMusicAssembly extends StatelessWidget {
               Container(
                 alignment: Alignment.topCenter,
                 padding: const EdgeInsets.symmetric(horizontal: UiSizes.spaceS),
-                child: KitMusicSyncPrompt(
-                  phase: provider.syncPhase,
-                  current: provider.syncCurrent,
-                  total: provider.syncTotal,
-                  onConfirm: () => provider.sync(),
-                  onCancel: () {},
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    KitMusicSearchBar(
+                      isExpanded: _advancedExpanded,
+                      isUtageActive: provider.isUtageMode,
+                      onExpandChanged: (v) =>
+                          setState(() => _advancedExpanded = v),
+                      onUtageToggle: () => provider.toggleUtageMode(),
+                    ),
+                    const SizedBox(height: UiSizes.spaceXS),
+                    KitMusicCategoryFilter(isExpanded: _advancedExpanded),
+                    const SizedBox(height: UiSizes.spaceS),
+                    KitMusicSyncPrompt(
+                      phase: provider.syncPhase,
+                      current: provider.syncCurrent,
+                      total: provider.syncTotal,
+                      onConfirm: () => provider.sync(),
+                      onCancel: () {},
+                    ),
+                  ],
                 ),
               ),
             ],

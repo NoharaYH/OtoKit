@@ -15,6 +15,7 @@ migrate_working_dir/
 .env
 lib/kernel/config/env.dart
 lib/kernel/config/env.g.dart
+test/sql/
 
 # IntelliJ
 *.iml
