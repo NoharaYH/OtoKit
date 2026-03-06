@@ -314,91 +314,56 @@ class KitCoverImage extends StatelessWidget {
 
 ## 7. 宴会场 (Utage) 曲目专项结构
 
-宴曲 (genre == `"宴会場"`) 在数据结构上与普通歌曲存在根本差异，`MaiTransformer` 已通过 `isUtage` 标记对其进行隔离处理。
+宴谱与普通曲**分表存储**：OSS 提供独立宴谱 JSON，写入 `mai_utage_data`；行模型为 `MaiUtageRow`（无 genre、无 charts_json、**无 is_buddy**）。
 
 ### 7.1 差异说明
 
-| 属性                | 普通曲目                       | 宴曲                    |
-| ------------------- | ------------------------------ | ----------------------- |
-| `charts` 数量       | 1 ~ 5 张（Basic 到 Re:Master） | 1 ~ 2 张                |
-| `charts` 语义       | 难度分层                       | 玩家角色分层（1P / 2P） |
-| `label`             | `Basic` / `Advanced` ...       | `Utage` / `Utage 2P`    |
-| `is_utage`          | `false`                        | `true`                  |
-| 是否有 `touch` note | DX 谱才有                      | 通常有，但结构不稳定    |
+| 属性          | 普通曲目                       | 宴谱                         |
+| ------------- | ------------------------------ | ---------------------------- |
+| 表            | mai_music_data                | mai_utage_data               |
+| 行类型        | MaiMusicRow                   | MaiUtageRow                  |
+| 谱面存储      | charts_json                   | utage_charts_json (sides+notes) |
+| 宴谱信息块    | 无                             | utage_info_json              |
 
-### 7.2 宴曲 `MaiSongRow` 行结构示例
+### 7.2 宴曲 `MaiUtageRow` 与表结构
 
-单人宴曲（只有 1P 谱面）：
+宴表列：id, title, artist, bpm, type, version_text, version_id, utage_info_json, utage_charts_json。
 
-```json
-{
-  "id": 70040,
-  "title": "好き！雪！本気マジック",
-  "artist": "北島三郎 × HoneyWorks",
-  "bpm": 155,
-  "type": "SD",
-  "genre": "宴会場",
-  "version_text": "maimai でらっくす",
-  "version_id": 19000,
-  "charts_json": "[{\"difficulty\":0,\"label\":\"Utage\",\"level\":\"宴\",\"constant\":0.0,\"designer\":\"---\",\"tap\":312,\"hold\":28,\"slide\":14,\"touch\":0,\"break\":6,\"total\":360,\"is_utage\":true}]"
-}
-```
-
-双人协演宴曲（含 2P 谱面）：
+`utage_info_json` 示例：
 
 ```json
 {
-  "id": 70130,
-  "title": "進め！むてんかへ!!(でらっくす版)",
-  "artist": "ノーポイッ!",
-  "bpm": 168,
-  "type": "SD",
-  "genre": "宴会場",
-  "version_text": "maimai でらっくす",
-  "version_id": 19000,
-  "charts_json": "[{\"difficulty\":0,\"label\":\"Utage\",\"level\":\"宴\",\"constant\":0.0,\"designer\":\"---\",\"tap\":288,\"hold\":22,\"slide\":18,\"touch\":0,\"break\":8,\"total\":336,\"is_utage\":true},{\"difficulty\":1,\"label\":\"Utage 2P\",\"level\":\"宴\",\"constant\":0.0,\"designer\":\"---\",\"tap\":276,\"hold\":20,\"slide\":16,\"touch\":0,\"break\":6,\"total\":318,\"is_utage\":true}]"
+  "level": "宴等级",
+  "type": "宴",
+  "commit": "谱师骚话",
+  "skip_condition": "",
+  "player_count": [2, 2]
 }
 ```
 
-`charts_json` 展开后：
+`utage_charts_json` 示例（数组，每项含 sides + notes）：
 
 ```json
 [
   {
-    "difficulty": 0,
-    "label": "Utage",
-    "level": "宴",
-    "constant": 0.0,
-    "designer": "---",
-    "tap": 288,
-    "hold": 22,
-    "slide": 18,
-    "touch": 0,
-    "break": 8,
-    "total": 336,
-    "is_utage": true
-  },
-  {
-    "difficulty": 1,
-    "label": "Utage 2P",
-    "level": "宴",
-    "constant": 0.0,
-    "designer": "---",
-    "tap": 276,
-    "hold": 20,
-    "slide": 16,
-    "touch": 0,
-    "break": 6,
-    "total": 318,
-    "is_utage": true
+    "sides": "left",
+    "notes": {
+      "total": 336,
+      "tap": 288,
+      "hold": 22,
+      "slide": 18,
+      "touch": 0,
+      "break": 8
+    }
   }
 ]
 ```
 
 ### 7.3 UI 层消费规程
 
-- 通过顶层 `genre == '宴会場'` 字段在 SQLite 进行一次性过滤，无需解析 `chartsJson`。
-- 展示宴曲卡片时，ONLY 读取 `charts_json` 内的 `is_utage: true` 条目，不得将其混入普通难度选择列表。
+- 曲库页：只查 `mai_music_data`，使用 `watchSongs()` → `MaiDbMapper.fromTable`。
+- 宴谱页：只查 `mai_utage_data`，使用 `watchUtageSongs()` → `MaiDbMapper.fromUtageTable`。
+- 宴谱数据不混入普通曲库列表。
 
 ---
 
@@ -431,28 +396,27 @@ CREATE INDEX IF NOT EXISTS idx_mai_music_title    ON mai_music_data (title);
 
 ### 8.2 `mai_utage_data` (宴会场专项表)
 
-对应：`genre == '宴会場'` 的所有曲目。
+对应：宴谱专用；OSS 提供独立宴谱 JSON，写入本表。**无 is_buddy 列**。
 
 ```sql
 CREATE TABLE IF NOT EXISTS mai_utage_data (
-    id           INTEGER  NOT NULL PRIMARY KEY,
-    title        TEXT     NOT NULL,
-    artist       TEXT     NOT NULL,
-    bpm          INTEGER  NOT NULL,
-    type         TEXT     NOT NULL,              -- 宴曲几乎全为 'SD'
-    version_text TEXT     NOT NULL,
-    version_id   INTEGER  NOT NULL,
-    is_buddy     INTEGER  NOT NULL DEFAULT 0,    -- 是否为双人协演谱: 0=否 1=是
-    charts_json  TEXT     NOT NULL               -- JSON 数组，包含 1~2 条 MaiChartRow
+    id                INTEGER  NOT NULL PRIMARY KEY,
+    title             TEXT     NOT NULL,
+    artist            TEXT     NOT NULL,
+    bpm               INTEGER  NOT NULL,
+    type              TEXT     NOT NULL,        -- 宴曲几乎全为 'SD'
+    version_text      TEXT     NOT NULL,
+    version_id        INTEGER  NOT NULL,
+    utage_info_json   TEXT     NOT NULL,       -- 宴谱信息块 JSON (level, type, commit, skip_condition, player_count)
+    utage_charts_json TEXT     NOT NULL        -- 宴谱面数组 JSON (sides + notes)
 );
 
 -- 核心索引
-CREATE INDEX IF NOT EXISTS idx_mai_utage_buddy    ON mai_utage_data (is_buddy);
-CREATE INDEX IF NOT EXISTS idx_mai_utage_title    ON mai_utage_data (title);
+CREATE INDEX IF NOT EXISTS idx_mai_utage_title ON mai_utage_data (title);
 ```
 
 ### 8.3 设计原则
 
-1.  **物理隔离**: 宴曲独立成表，确保主曲库查询逻辑不受其特殊结构（1P/2P 分层）的干扰。
-2.  **冗余消除**: `mai_utage_data` 表中完全剔除 `genre` 字段（恒为“宴会場”）。
-3.  **零关联 (Zero Join)**: 谱面信息采用 JSON 文本形式在主行中闭环存储。鉴于 OTOKiT 的单曲查询频次远高于跨曲目的谱面分布统计，此方案能显著降低检索时的 CPU 震荡与内存碎片。
+1.  **物理隔离**: 普通曲与宴谱分表存储；OSS 侧提供两个 JSON，分别写入 mai_music_data / mai_utage_data。
+2.  **冗余消除**: `mai_utage_data` 无 genre（恒为“宴会場”）、无 charts_json、无 is_buddy。
+3.  **零关联 (Zero Join)**: 谱面/宴谱面信息以 JSON 文本在主行中闭环存储。

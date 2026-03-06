@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+/// 普通曲表（仅 basic info + charts）
 @DataClassName('MaiMusicTableData')
 class MaiMusicTable extends Table {
   @override
@@ -9,7 +10,7 @@ class MaiMusicTable extends Table {
   TextColumn get title => text().withLength(min: 1)();
   TextColumn get artist => text()();
   IntColumn get bpm => integer()();
-  TextColumn get type => text()(); // SD or DX
+  TextColumn get type => text()();
   TextColumn get genre => text()();
   TextColumn get versionText => text()();
   IntColumn get versionId => integer()();
@@ -19,6 +20,7 @@ class MaiMusicTable extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// 宴谱表（仅 basic info + utage_info + utage_charts，无 isBuddy）
 @DataClassName('MaiUtageTableData')
 class MaiUtageTable extends Table {
   @override
@@ -31,8 +33,8 @@ class MaiUtageTable extends Table {
   TextColumn get type => text()();
   TextColumn get versionText => text()();
   IntColumn get versionId => integer()();
-  BoolColumn get isBuddy => boolean().withDefault(const Constant(false))();
-  TextColumn get chartsJson => text()();
+  TextColumn get utageInfoJson => text()();
+  TextColumn get utageChartsJson => text()();
 
   @override
   Set<Column> get primaryKey => {id};

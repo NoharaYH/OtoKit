@@ -622,27 +622,23 @@ class $MaiUtageTableTable extends MaiUtageTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _isBuddyMeta = const VerificationMeta(
-    'isBuddy',
+  static const VerificationMeta _utageInfoJsonMeta = const VerificationMeta(
+    'utageInfoJson',
   );
   @override
-  late final GeneratedColumn<bool> isBuddy = GeneratedColumn<bool>(
-    'is_buddy',
+  late final GeneratedColumn<String> utageInfoJson = GeneratedColumn<String>(
+    'utage_info_json',
     aliasedName,
     false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_buddy" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
-  static const VerificationMeta _chartsJsonMeta = const VerificationMeta(
-    'chartsJson',
+  static const VerificationMeta _utageChartsJsonMeta = const VerificationMeta(
+    'utageChartsJson',
   );
   @override
-  late final GeneratedColumn<String> chartsJson = GeneratedColumn<String>(
-    'charts_json',
+  late final GeneratedColumn<String> utageChartsJson = GeneratedColumn<String>(
+    'utage_charts_json',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -657,8 +653,8 @@ class $MaiUtageTableTable extends MaiUtageTable
     type,
     versionText,
     versionId,
-    isBuddy,
-    chartsJson,
+    utageInfoJson,
+    utageChartsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -726,19 +722,27 @@ class $MaiUtageTableTable extends MaiUtageTable
     } else if (isInserting) {
       context.missing(_versionIdMeta);
     }
-    if (data.containsKey('is_buddy')) {
+    if (data.containsKey('utage_info_json')) {
       context.handle(
-        _isBuddyMeta,
-        isBuddy.isAcceptableOrUnknown(data['is_buddy']!, _isBuddyMeta),
-      );
-    }
-    if (data.containsKey('charts_json')) {
-      context.handle(
-        _chartsJsonMeta,
-        chartsJson.isAcceptableOrUnknown(data['charts_json']!, _chartsJsonMeta),
+        _utageInfoJsonMeta,
+        utageInfoJson.isAcceptableOrUnknown(
+          data['utage_info_json']!,
+          _utageInfoJsonMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_chartsJsonMeta);
+      context.missing(_utageInfoJsonMeta);
+    }
+    if (data.containsKey('utage_charts_json')) {
+      context.handle(
+        _utageChartsJsonMeta,
+        utageChartsJson.isAcceptableOrUnknown(
+          data['utage_charts_json']!,
+          _utageChartsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_utageChartsJsonMeta);
     }
     return context;
   }
@@ -777,13 +781,13 @@ class $MaiUtageTableTable extends MaiUtageTable
         DriftSqlType.int,
         data['${effectivePrefix}version_id'],
       )!,
-      isBuddy: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_buddy'],
-      )!,
-      chartsJson: attachedDatabase.typeMapping.read(
+      utageInfoJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}charts_json'],
+        data['${effectivePrefix}utage_info_json'],
+      )!,
+      utageChartsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}utage_charts_json'],
       )!,
     );
   }
@@ -803,8 +807,8 @@ class MaiUtageTableData extends DataClass
   final String type;
   final String versionText;
   final int versionId;
-  final bool isBuddy;
-  final String chartsJson;
+  final String utageInfoJson;
+  final String utageChartsJson;
   const MaiUtageTableData({
     required this.id,
     required this.title,
@@ -813,8 +817,8 @@ class MaiUtageTableData extends DataClass
     required this.type,
     required this.versionText,
     required this.versionId,
-    required this.isBuddy,
-    required this.chartsJson,
+    required this.utageInfoJson,
+    required this.utageChartsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -826,8 +830,8 @@ class MaiUtageTableData extends DataClass
     map['type'] = Variable<String>(type);
     map['version_text'] = Variable<String>(versionText);
     map['version_id'] = Variable<int>(versionId);
-    map['is_buddy'] = Variable<bool>(isBuddy);
-    map['charts_json'] = Variable<String>(chartsJson);
+    map['utage_info_json'] = Variable<String>(utageInfoJson);
+    map['utage_charts_json'] = Variable<String>(utageChartsJson);
     return map;
   }
 
@@ -840,8 +844,8 @@ class MaiUtageTableData extends DataClass
       type: Value(type),
       versionText: Value(versionText),
       versionId: Value(versionId),
-      isBuddy: Value(isBuddy),
-      chartsJson: Value(chartsJson),
+      utageInfoJson: Value(utageInfoJson),
+      utageChartsJson: Value(utageChartsJson),
     );
   }
 
@@ -858,8 +862,8 @@ class MaiUtageTableData extends DataClass
       type: serializer.fromJson<String>(json['type']),
       versionText: serializer.fromJson<String>(json['versionText']),
       versionId: serializer.fromJson<int>(json['versionId']),
-      isBuddy: serializer.fromJson<bool>(json['isBuddy']),
-      chartsJson: serializer.fromJson<String>(json['chartsJson']),
+      utageInfoJson: serializer.fromJson<String>(json['utageInfoJson']),
+      utageChartsJson: serializer.fromJson<String>(json['utageChartsJson']),
     );
   }
   @override
@@ -873,8 +877,8 @@ class MaiUtageTableData extends DataClass
       'type': serializer.toJson<String>(type),
       'versionText': serializer.toJson<String>(versionText),
       'versionId': serializer.toJson<int>(versionId),
-      'isBuddy': serializer.toJson<bool>(isBuddy),
-      'chartsJson': serializer.toJson<String>(chartsJson),
+      'utageInfoJson': serializer.toJson<String>(utageInfoJson),
+      'utageChartsJson': serializer.toJson<String>(utageChartsJson),
     };
   }
 
@@ -886,8 +890,8 @@ class MaiUtageTableData extends DataClass
     String? type,
     String? versionText,
     int? versionId,
-    bool? isBuddy,
-    String? chartsJson,
+    String? utageInfoJson,
+    String? utageChartsJson,
   }) => MaiUtageTableData(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -896,8 +900,8 @@ class MaiUtageTableData extends DataClass
     type: type ?? this.type,
     versionText: versionText ?? this.versionText,
     versionId: versionId ?? this.versionId,
-    isBuddy: isBuddy ?? this.isBuddy,
-    chartsJson: chartsJson ?? this.chartsJson,
+    utageInfoJson: utageInfoJson ?? this.utageInfoJson,
+    utageChartsJson: utageChartsJson ?? this.utageChartsJson,
   );
   MaiUtageTableData copyWithCompanion(MaiUtageTableCompanion data) {
     return MaiUtageTableData(
@@ -910,10 +914,12 @@ class MaiUtageTableData extends DataClass
           ? data.versionText.value
           : this.versionText,
       versionId: data.versionId.present ? data.versionId.value : this.versionId,
-      isBuddy: data.isBuddy.present ? data.isBuddy.value : this.isBuddy,
-      chartsJson: data.chartsJson.present
-          ? data.chartsJson.value
-          : this.chartsJson,
+      utageInfoJson: data.utageInfoJson.present
+          ? data.utageInfoJson.value
+          : this.utageInfoJson,
+      utageChartsJson: data.utageChartsJson.present
+          ? data.utageChartsJson.value
+          : this.utageChartsJson,
     );
   }
 
@@ -927,8 +933,8 @@ class MaiUtageTableData extends DataClass
           ..write('type: $type, ')
           ..write('versionText: $versionText, ')
           ..write('versionId: $versionId, ')
-          ..write('isBuddy: $isBuddy, ')
-          ..write('chartsJson: $chartsJson')
+          ..write('utageInfoJson: $utageInfoJson, ')
+          ..write('utageChartsJson: $utageChartsJson')
           ..write(')'))
         .toString();
   }
@@ -942,8 +948,8 @@ class MaiUtageTableData extends DataClass
     type,
     versionText,
     versionId,
-    isBuddy,
-    chartsJson,
+    utageInfoJson,
+    utageChartsJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -956,8 +962,8 @@ class MaiUtageTableData extends DataClass
           other.type == this.type &&
           other.versionText == this.versionText &&
           other.versionId == this.versionId &&
-          other.isBuddy == this.isBuddy &&
-          other.chartsJson == this.chartsJson);
+          other.utageInfoJson == this.utageInfoJson &&
+          other.utageChartsJson == this.utageChartsJson);
 }
 
 class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
@@ -968,8 +974,8 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
   final Value<String> type;
   final Value<String> versionText;
   final Value<int> versionId;
-  final Value<bool> isBuddy;
-  final Value<String> chartsJson;
+  final Value<String> utageInfoJson;
+  final Value<String> utageChartsJson;
   const MaiUtageTableCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -978,8 +984,8 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
     this.type = const Value.absent(),
     this.versionText = const Value.absent(),
     this.versionId = const Value.absent(),
-    this.isBuddy = const Value.absent(),
-    this.chartsJson = const Value.absent(),
+    this.utageInfoJson = const Value.absent(),
+    this.utageChartsJson = const Value.absent(),
   });
   MaiUtageTableCompanion.insert({
     this.id = const Value.absent(),
@@ -989,15 +995,16 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
     required String type,
     required String versionText,
     required int versionId,
-    this.isBuddy = const Value.absent(),
-    required String chartsJson,
+    required String utageInfoJson,
+    required String utageChartsJson,
   }) : title = Value(title),
        artist = Value(artist),
        bpm = Value(bpm),
        type = Value(type),
        versionText = Value(versionText),
        versionId = Value(versionId),
-       chartsJson = Value(chartsJson);
+       utageInfoJson = Value(utageInfoJson),
+       utageChartsJson = Value(utageChartsJson);
   static Insertable<MaiUtageTableData> custom({
     Expression<int>? id,
     Expression<String>? title,
@@ -1006,8 +1013,8 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
     Expression<String>? type,
     Expression<String>? versionText,
     Expression<int>? versionId,
-    Expression<bool>? isBuddy,
-    Expression<String>? chartsJson,
+    Expression<String>? utageInfoJson,
+    Expression<String>? utageChartsJson,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1017,8 +1024,8 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
       if (type != null) 'type': type,
       if (versionText != null) 'version_text': versionText,
       if (versionId != null) 'version_id': versionId,
-      if (isBuddy != null) 'is_buddy': isBuddy,
-      if (chartsJson != null) 'charts_json': chartsJson,
+      if (utageInfoJson != null) 'utage_info_json': utageInfoJson,
+      if (utageChartsJson != null) 'utage_charts_json': utageChartsJson,
     });
   }
 
@@ -1030,8 +1037,8 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
     Value<String>? type,
     Value<String>? versionText,
     Value<int>? versionId,
-    Value<bool>? isBuddy,
-    Value<String>? chartsJson,
+    Value<String>? utageInfoJson,
+    Value<String>? utageChartsJson,
   }) {
     return MaiUtageTableCompanion(
       id: id ?? this.id,
@@ -1041,8 +1048,8 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
       type: type ?? this.type,
       versionText: versionText ?? this.versionText,
       versionId: versionId ?? this.versionId,
-      isBuddy: isBuddy ?? this.isBuddy,
-      chartsJson: chartsJson ?? this.chartsJson,
+      utageInfoJson: utageInfoJson ?? this.utageInfoJson,
+      utageChartsJson: utageChartsJson ?? this.utageChartsJson,
     );
   }
 
@@ -1070,11 +1077,11 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
     if (versionId.present) {
       map['version_id'] = Variable<int>(versionId.value);
     }
-    if (isBuddy.present) {
-      map['is_buddy'] = Variable<bool>(isBuddy.value);
+    if (utageInfoJson.present) {
+      map['utage_info_json'] = Variable<String>(utageInfoJson.value);
     }
-    if (chartsJson.present) {
-      map['charts_json'] = Variable<String>(chartsJson.value);
+    if (utageChartsJson.present) {
+      map['utage_charts_json'] = Variable<String>(utageChartsJson.value);
     }
     return map;
   }
@@ -1089,8 +1096,8 @@ class MaiUtageTableCompanion extends UpdateCompanion<MaiUtageTableData> {
           ..write('type: $type, ')
           ..write('versionText: $versionText, ')
           ..write('versionId: $versionId, ')
-          ..write('isBuddy: $isBuddy, ')
-          ..write('chartsJson: $chartsJson')
+          ..write('utageInfoJson: $utageInfoJson, ')
+          ..write('utageChartsJson: $utageChartsJson')
           ..write(')'))
         .toString();
   }
@@ -1399,8 +1406,8 @@ typedef $$MaiUtageTableTableCreateCompanionBuilder =
       required String type,
       required String versionText,
       required int versionId,
-      Value<bool> isBuddy,
-      required String chartsJson,
+      required String utageInfoJson,
+      required String utageChartsJson,
     });
 typedef $$MaiUtageTableTableUpdateCompanionBuilder =
     MaiUtageTableCompanion Function({
@@ -1411,8 +1418,8 @@ typedef $$MaiUtageTableTableUpdateCompanionBuilder =
       Value<String> type,
       Value<String> versionText,
       Value<int> versionId,
-      Value<bool> isBuddy,
-      Value<String> chartsJson,
+      Value<String> utageInfoJson,
+      Value<String> utageChartsJson,
     });
 
 class $$MaiUtageTableTableFilterComposer
@@ -1459,13 +1466,13 @@ class $$MaiUtageTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get isBuddy => $composableBuilder(
-    column: $table.isBuddy,
+  ColumnFilters<String> get utageInfoJson => $composableBuilder(
+    column: $table.utageInfoJson,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get chartsJson => $composableBuilder(
-    column: $table.chartsJson,
+  ColumnFilters<String> get utageChartsJson => $composableBuilder(
+    column: $table.utageChartsJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1514,13 +1521,13 @@ class $$MaiUtageTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get isBuddy => $composableBuilder(
-    column: $table.isBuddy,
+  ColumnOrderings<String> get utageInfoJson => $composableBuilder(
+    column: $table.utageInfoJson,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get chartsJson => $composableBuilder(
-    column: $table.chartsJson,
+  ColumnOrderings<String> get utageChartsJson => $composableBuilder(
+    column: $table.utageChartsJson,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -1557,11 +1564,13 @@ class $$MaiUtageTableTableAnnotationComposer
   GeneratedColumn<int> get versionId =>
       $composableBuilder(column: $table.versionId, builder: (column) => column);
 
-  GeneratedColumn<bool> get isBuddy =>
-      $composableBuilder(column: $table.isBuddy, builder: (column) => column);
+  GeneratedColumn<String> get utageInfoJson => $composableBuilder(
+    column: $table.utageInfoJson,
+    builder: (column) => column,
+  );
 
-  GeneratedColumn<String> get chartsJson => $composableBuilder(
-    column: $table.chartsJson,
+  GeneratedColumn<String> get utageChartsJson => $composableBuilder(
+    column: $table.utageChartsJson,
     builder: (column) => column,
   );
 }
@@ -1608,8 +1617,8 @@ class $$MaiUtageTableTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<String> versionText = const Value.absent(),
                 Value<int> versionId = const Value.absent(),
-                Value<bool> isBuddy = const Value.absent(),
-                Value<String> chartsJson = const Value.absent(),
+                Value<String> utageInfoJson = const Value.absent(),
+                Value<String> utageChartsJson = const Value.absent(),
               }) => MaiUtageTableCompanion(
                 id: id,
                 title: title,
@@ -1618,8 +1627,8 @@ class $$MaiUtageTableTableTableManager
                 type: type,
                 versionText: versionText,
                 versionId: versionId,
-                isBuddy: isBuddy,
-                chartsJson: chartsJson,
+                utageInfoJson: utageInfoJson,
+                utageChartsJson: utageChartsJson,
               ),
           createCompanionCallback:
               ({
@@ -1630,8 +1639,8 @@ class $$MaiUtageTableTableTableManager
                 required String type,
                 required String versionText,
                 required int versionId,
-                Value<bool> isBuddy = const Value.absent(),
-                required String chartsJson,
+                required String utageInfoJson,
+                required String utageChartsJson,
               }) => MaiUtageTableCompanion.insert(
                 id: id,
                 title: title,
@@ -1640,8 +1649,8 @@ class $$MaiUtageTableTableTableManager
                 type: type,
                 versionText: versionText,
                 versionId: versionId,
-                isBuddy: isBuddy,
-                chartsJson: chartsJson,
+                utageInfoJson: utageInfoJson,
+                utageChartsJson: utageChartsJson,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

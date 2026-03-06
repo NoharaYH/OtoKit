@@ -17,7 +17,6 @@ class MaiMusicProvider extends ChangeNotifier {
 
   List<MaiMusic> _musics = [];
   List<MaiMusic> _utageMusics = [];
-  List<MaiMusic> _allMusics = [];
 
   bool _isInitialized = false;
   bool _isLoading = false;
@@ -28,8 +27,9 @@ class MaiMusicProvider extends ChangeNotifier {
   SyncPhase get syncPhase => _syncPhase;
   int get syncCurrent => 0;
   int get syncTotal => 0;
-  bool get hasData => _allMusics.isNotEmpty;
-  List<MaiMusic> get musics => _allMusics;
+  bool get hasData => _musics.isNotEmpty;
+  List<MaiMusic> get musics => _musics;
+  List<MaiMusic> get utageMusics => _utageMusics;
 
   @override
   void dispose() {
@@ -38,7 +38,7 @@ class MaiMusicProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  /// 初始化：启动数据库流监听
+  /// 初始化：订阅普通曲库流与宴谱流
   Future<void> init() async {
     if (_isInitialized) return;
 
@@ -47,44 +47,57 @@ class MaiMusicProvider extends ChangeNotifier {
 
     _musicSubscription = _maiMusicDao.watchSongs().listen((rows) {
       _musics = rows.map((r) => MaiDbMapper.fromTable(r)).toList();
-      _mergeAndNotify();
+      _checkInitialized();
     });
 
     _utageSubscription = _maiMusicDao.watchUtageSongs().listen((rows) {
       _utageMusics = rows.map((r) => MaiDbMapper.fromUtageTable(r)).toList();
-      _mergeAndNotify();
+      _checkInitialized();
     });
   }
 
-  void _mergeAndNotify() {
-    final combined = [..._musics, ..._utageMusics];
-    combined.sort((a, b) => a.basicInfo.id.compareTo(b.basicInfo.id));
-    _allMusics = combined;
+  void _checkInitialized() {
     _isInitialized = true;
     _isLoading = false;
     notifyListeners();
   }
 
-  /// 从 OSS 拉取曲库 JSON 并批量写入 SQLite
+  /// 从 OSS 拉取两个 JSON 并分别写入两表
   Future<void> sync() async {
     if (_isLoading) return;
     _isLoading = true;
     notifyListeners();
 
     try {
-      final newSongs = await _syncHandler.performSync(
+      final result = await _syncHandler.performSync(
         onPhaseChanged: (phase) {
           _syncPhase = phase;
           notifyListeners();
         },
       );
 
-      if (newSongs != null) {
-        await _maiMusicDao.batchInsert(newSongs);
-        _toastProvider.show(
-          "曲库同步成功 (${newSongs.length} 首)",
-          ToastType.confirmed,
-        );
+      if (result != null) {
+        int normalCount = 0;
+        int utageCount = 0;
+        if (result.normal != null && result.normal!.isNotEmpty) {
+          await _maiMusicDao.batchInsertNormal(result.normal!);
+          normalCount = result.normal!.length;
+        }
+        if (result.utage != null && result.utage!.isNotEmpty) {
+          await _maiMusicDao.batchInsertUtage(result.utage!);
+          utageCount = result.utage!.length;
+        }
+        if (normalCount > 0 || utageCount > 0) {
+          final parts = <String>[];
+          if (normalCount > 0) parts.add('普通 $normalCount 首');
+          if (utageCount > 0) parts.add('宴谱 $utageCount 首');
+          _toastProvider.show(
+            "曲库同步成功 (${parts.join('，')})",
+            ToastType.confirmed,
+          );
+        } else {
+          _toastProvider.show("曲库已是最新", ToastType.confirmed);
+        }
       } else {
         _toastProvider.show("曲库已是最新", ToastType.confirmed);
       }
@@ -98,11 +111,24 @@ class MaiMusicProvider extends ChangeNotifier {
     }
   }
 
-  /// 搜索：基于内存当前快照进行快速模糊匹配
+  /// 搜索普通曲
   List<MaiMusic> search(String query) {
-    if (query.isEmpty) return _allMusics;
+    if (query.isEmpty) return _musics;
     final search = query.toLowerCase();
-    return _allMusics
+    return _musics
+        .where(
+          (m) =>
+              m.basicInfo.title.toLowerCase().contains(search) ||
+              m.basicInfo.id.toString() == search,
+        )
+        .toList();
+  }
+
+  /// 搜索宴谱
+  List<MaiMusic> searchUtage(String query) {
+    if (query.isEmpty) return _utageMusics;
+    final search = query.toLowerCase();
+    return _utageMusics
         .where(
           (m) =>
               m.basicInfo.title.toLowerCase().contains(search) ||

@@ -15,7 +15,17 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          await customStatement('DROP TABLE IF EXISTS mai_utage_data');
+          await customStatement('DROP TABLE IF EXISTS mai_music_data');
+          await m.createAll();
+        },
+      );
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
