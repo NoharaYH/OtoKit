@@ -8,27 +8,36 @@ import 'package:injectable/injectable.dart';
 import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../domain/entities/handle_log_result.dart';
 import '../../domain/entities/token_bundle.dart';
-import '../../domain/entities/vpn_start_config.dart';
 import '../../domain/entities/vpn_status.dart';
 import '../../domain/repositories/auth_repository.dart';
-import '../../domain/repositories/transfer_repository.dart';
 import '../../domain/repositories/vpn_repository.dart';
-import '../../domain/services/html_record_parser.dart';
+import '../../domain/usecases/transfer/handle_native_log_usecase.dart';
+import '../../domain/usecases/transfer/refresh_lxns_token_usecase.dart';
+import '../../domain/usecases/transfer/start_import_usecase.dart';
+import '../../domain/usecases/transfer/stop_import_usecase.dart';
+import '../../domain/usecases/transfer/verify_tokens_usecase.dart';
+import '../../domain/value_objects/difficulty_set.dart';
 import '../../domain/value_objects/game_type.dart';
+import '../../domain/value_objects/transfer_mode.dart';
 import '../../infrastructure/network/oauth/pkce_helper.dart';
 import '../../shared/constants/domain_constants.dart';
 import '../../shared/env/app_env.dart';
 
-/// TransferProvider：纯 UI 状态中转层。
+/// TransferController：纯 UI 状态中转层，通过 UseCase 编排业务。
+/// Phase 4 命名规范，≤200 行目标见 02_状态层。
 @injectable
-class TransferProvider extends ChangeNotifier {
-  TransferProvider(
+class TransferController extends ChangeNotifier {
+  TransferController(
+    this._verifyTokens,
+    this._startImport,
+    this._stopImport,
+    this._handleLogUsecase,
+    this._refreshToken,
     this._authRepo,
-    this._transferRepo,
     this._vpnRepo,
     this._env,
-    this._htmlParser,
   ) {
     _loadTokens();
     _statusSubscription = _vpnRepo.statusStream.listen(_onVpnStatus);
@@ -36,11 +45,14 @@ class TransferProvider extends ChangeNotifier {
     _initDeepLinks();
   }
 
+  final VerifyTokensUsecase _verifyTokens;
+  final StartImportUsecase _startImport;
+  final StopImportUsecase _stopImport;
+  final HandleNativeLogUsecase _handleLogUsecase;
+  final RefreshLxnsTokenUsecase _refreshToken;
   final AuthRepository _authRepo;
-  final TransferRepository _transferRepo;
   final VpnRepository _vpnRepo;
   final AppEnv _env;
-  final HtmlRecordParser _htmlParser;
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   StreamSubscription<VpnStatus>? _statusSubscription;
@@ -241,40 +253,22 @@ class TransferProvider extends ChangeNotifier {
   void _handleLog(String msg) async {
     if (_trackingGameType == null) return;
 
-    // 拦截 HTML 原始数据，执行手机侧独立解析与上传
+    // 拦截 HTML 原始数据，委托 HandleNativeLogUsecase 解析与上传
     if (msg.contains("[HTML_DATA_SYNC]")) {
       try {
-        final rawJson = msg.split("[HTML_DATA_SYNC]")[1];
-        final payload = jsonDecode(rawJson);
-        final html = payload['html'] as String;
-        final token = payload['token'] as String;
-        final diff = payload['diff'] as int;
-        final gameType = payload['gameType'] as int;
-
-        if (gameType == 0) {
-          final records = _htmlParser.parse(html);
-          if (records.isNotEmpty) {
-            final result = await _transferRepo.uploadMaimaiRecords(token, records);
-            final label = (diff == 10) ? DomainConstants.diffLabelUtage : "难度$diff";
-            result.fold(
-              (_) {
-                appendLog(
-                  "${DomainConstants.logTagUpload} ${DomainConstants.logUploadSuccess.replaceAll("{0}", DomainConstants.modeDivingFish).replaceAll("{1}", label)}",
-                );
-              },
-              (e) {
-                appendLog(
-                  "${DomainConstants.logTagError} ${DomainConstants.logErrUpload.replaceAll("{0}", DomainConstants.modeDivingFish).replaceAll("{1}", label).replaceAll("{2}", "400").replaceAll("{3}", e.message)}",
-                );
-              },
-            );
-          }
-          // 重要：反馈给原生侧，解除同步锁，允许切换至落雪平台
-          await _vpnRepo.notifyDivingFishTaskDone();
+        final game = _trackingGameType == 1
+            ? GameType.chunithm
+            : GameType.maimai;
+        final result = await _handleLogUsecase.execute(msg, game);
+        if (result is HandleLogResultUpload) {
+          appendLog(
+            "${DomainConstants.logTagUpload} ${result.message}",
+          );
+        } else if (result is HandleLogResultPlain && result.rawLog.isNotEmpty) {
+          appendLog("${DomainConstants.logTagError} ${DomainConstants.logErrParse}");
         }
       } catch (e) {
         appendLog("${DomainConstants.logTagError} ${DomainConstants.logErrParse}: $e");
-        await _vpnRepo.notifyDivingFishTaskDone();
       }
       return;
     }
@@ -304,64 +298,35 @@ class TransferProvider extends ChangeNotifier {
   void appendLog(String msg) => _handleLog(msg);
 
   Future<void> startVpn({required int mode}) async {
-    final finalDfToken = (mode == 0 || mode == 1) ? dfToken : "";
-    final finalLxnsToken = (mode == 2 || mode == 1) ? lxnsToken : "";
-
     final gameType = _trackingGameType ?? 0;
-    final gameConfig = _env.getTransferConfig(gameType);
-
-    final String fullLxnsUploadUrl =
-        "${_env.lxnsBaseUrl}/${gameConfig.lxnsUploadPath}";
-    final String fullDfUploadUrl =
-        "${_env.divingFishBaseUrl}/${gameConfig.dfUploadPath}";
-    final String fullWahlapAuthUrl =
-        "${_env.wahlapAuthBaseUrl}${gameConfig.wahlapAuthLabel}";
-    final String wahlapBaseUrl = gameConfig.wahlapBase;
-
-    final Map<int, String> fetchUrlMap = {};
-    if (gameType == 0) {
-      fetchUrlMap[-1] = "${wahlapBaseUrl}friend/userFriendCode/";
-      fetchUrlMap[-2] = "${wahlapBaseUrl}record/";
-      fetchUrlMap[10] =
-          "${wahlapBaseUrl}record/musicGenre/search/?genre=99&diff=10";
-      for (var d in _currentDifficulties) {
-        if (d >= 0 && d != 10) {
-          fetchUrlMap[d] =
-              "${wahlapBaseUrl}record/musicSort/search/?search=V&sort=1&playCheck=on&diff=$d";
-        }
-      }
-    } else {
-      fetchUrlMap[-1] = "${wahlapBaseUrl}home/playerData";
-      fetchUrlMap[-2] = "${wahlapBaseUrl}record/playlog";
-      fetchUrlMap[5] = "${wahlapBaseUrl}record/worldsEndList";
-      fetchUrlMap[10] = "${wahlapBaseUrl}record/worldsEndList";
-      for (var d in _currentDifficulties) {
-        if (d >= 0 && d < 5) {
-          fetchUrlMap[d] = "${wahlapBaseUrl}record/musicGenre?difficulty=$d";
-        }
-      }
-    }
-
-    final List<String> genreList = gameConfig.genreList;
-
-    final config = VpnStartConfig(
-      dfToken: finalDfToken,
-      lxnsToken: finalLxnsToken,
-      lxnsUploadUrl: fullLxnsUploadUrl,
-      dfUploadUrl: fullDfUploadUrl,
-      wahlapBaseUrl: wahlapBaseUrl,
-      wahlapAuthUrl: fullWahlapAuthUrl,
-      genreList: genreList,
-      fetchUrlMap: fetchUrlMap,
-      gameTypeIndex: _trackingGameType,
-      difficulties: _currentDifficulties.toList(),
+    final game = gameType == 1 ? GameType.chunithm : GameType.maimai;
+    final modeEnum = _intToTransferMode(mode);
+    final tokens = TokenBundle(
+      dfToken: dfToken,
+      lxnsToken: lxnsToken,
+      lxnsRefreshToken: lxnsRefreshToken,
     );
+    final difficulties = DifficultySet(_currentDifficulties);
 
-    await _vpnRepo.prepareAndStart(config);
+    await _startImport.execute(
+      game: game,
+      mode: modeEnum,
+      difficulties: difficulties,
+      tokens: tokens,
+    );
     if (_pendingWechat) {
       _pendingWechat = false;
       await _afterVpnReady();
     }
+  }
+
+  TransferMode _intToTransferMode(int mode) {
+    return switch (mode) {
+      0 => TransferMode.divingFishOnly,
+      1 => TransferMode.both,
+      2 => TransferMode.lxnsOnly,
+      _ => TransferMode.divingFishOnly,
+    };
   }
 
   /// VPN 实际启动后执行：写剪贴板、跳微信、打印日志。
@@ -390,7 +355,7 @@ class TransferProvider extends ChangeNotifier {
     if (isManually) {
       appendLog("${DomainConstants.logTagSystem} ${DomainConstants.logSysTerminated}");
     }
-    await _vpnRepo.stop();
+    await _stopImport.execute();
     if (resetState) {
       if (_trackingGameType != null && isManually) {
         // 手动终止时清理对应游戏的日志缓存，实现彻底隔离
@@ -472,7 +437,7 @@ class TransferProvider extends ChangeNotifier {
     }
 
     if (bundle.canRefresh) {
-      final result = await _authRepo.refreshLxnsToken(bundle.lxnsRefreshToken!);
+      final result = await _refreshToken.execute(bundle);
       result.fold(
         (newBundle) {
           lxnsToken = newBundle.lxnsToken;
@@ -523,60 +488,36 @@ class TransferProvider extends ChangeNotifier {
     notifyListeners();
 
     await Future.delayed(const Duration(milliseconds: 500));
-    final needsDf = mode == 0 || mode == 1;
-    final needsLxns = mode == 2 || mode == 1;
-
-    if (needsDf && dfToken.isEmpty) {
-      _errorMessage = DomainConstants.inputDivingFishToken;
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-    if (needsLxns && lxnsToken.isEmpty) {
-      _errorMessage = DomainConstants.inputLxnsToken;
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-
+    final modeEnum = _intToTransferMode(mode);
     final game = gameType == 1 ? GameType.chunithm : GameType.maimai;
-    bool dfSuccess = _isDivingFishVerifiedMap[gameType] ?? false;
-    bool lxnsSuccess = _isLxnsVerified;
-
-    if (needsDf && !dfSuccess) {
-      final r = await _authRepo.validateDivingFishToken(dfToken);
-      if (r.isFailure) {
-        _errorMessage =
-            "${DomainConstants.modeDivingFish} ${DomainConstants.logTagAuth} 验证失败";
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      dfSuccess = true;
-    }
-    if (needsLxns && !lxnsSuccess) {
-      final r = await _authRepo.validateLxnsToken(lxnsToken, game);
-      if (r.isFailure) {
-        _errorMessage = "${DomainConstants.modeLxns} ${DomainConstants.logTagAuth} 验证失败";
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-      lxnsSuccess = true;
-    }
-
-    _isDivingFishVerifiedMap[gameType] = dfSuccess;
-    _isLxnsVerified = lxnsSuccess;
-
-    await _authRepo.saveTokenBundle(TokenBundle(
+    final current = TokenBundle(
       dfToken: dfToken,
       lxnsToken: lxnsToken,
       lxnsRefreshToken: lxnsRefreshToken,
-    ));
+    );
 
-    _successMessage = DomainConstants.verifySuccess;
-    _isLoading = false;
-    notifyListeners();
-    return true;
+    final result = await _verifyTokens.execute(current, modeEnum, game);
+    return result.fold(
+      (bundle) {
+        dfToken = bundle.dfToken;
+        lxnsToken = bundle.lxnsToken;
+        lxnsRefreshToken = bundle.lxnsRefreshToken;
+        _isDivingFishVerifiedMap[gameType] = true;
+        _isLxnsVerified = modeEnum.needsLxns;
+        _successMessage = DomainConstants.verifySuccess;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      },
+      (e) {
+        _errorMessage = e.message;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      },
+    );
   }
 }
+
+/// 兼容旧引用，UI 可继续使用 TransferProvider 直到完成迁移。
+typedef TransferProvider = TransferController;

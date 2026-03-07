@@ -4,18 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 
 import '../../domain/entities/mai_music.dart';
-import '../../domain/repositories/music_library_repository.dart';
-import '../../infrastructure/storage/sql/daos/mai_music_dao.dart';
-import '../../infrastructure/storage/sql/mappers/music_row_mapper.dart';
 import '../../logic/mai_music_data/data_sync/mai_oss_sync_handler.dart';
+import '../../domain/usecases/music_data/init_music_library_usecase.dart';
+import '../../domain/usecases/music_data/sync_music_library_usecase.dart';
 import '../shared/toast_provider.dart';
 
+/// MusicLibraryController：曲库 UI 状态，经 Init/Sync UseCase 编排。
+/// Phase 4 命名规范，见 02_状态层 §3.3。
 @injectable
-class MaiMusicProvider extends ChangeNotifier {
-  MaiMusicProvider(this._maiMusicDao, this._musicLibraryRepo, this._toastProvider);
+class MusicLibraryController extends ChangeNotifier {
+  MusicLibraryController(
+    this._initUsecase,
+    this._syncUsecase,
+    this._toastProvider,
+  );
 
-  final MaiMusicDao _maiMusicDao;
-  final MusicLibraryRepository _musicLibraryRepo;
+  final InitMusicLibraryUsecase _initUsecase;
+  final SyncMusicLibraryUsecase _syncUsecase;
   final ToastProvider _toastProvider;
 
   StreamSubscription? _musicSubscription;
@@ -51,20 +56,20 @@ class MaiMusicProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  /// 初始化：订阅普通曲库流与宴谱流
+  /// 初始化：订阅普通曲库流与宴谱流（经 InitMusicLibraryUsecase）
   Future<void> init() async {
     if (_isInitialized) return;
 
     _isLoading = true;
     notifyListeners();
 
-    _musicSubscription = _maiMusicDao.watchSongs().listen((rows) {
-      _musics = rows.map((r) => MusicRowMapper.fromNormalTable(r)).toList();
+    final streams = _initUsecase.execute();
+    _musicSubscription = streams.normal.listen((list) {
+      _musics = list;
       _checkInitialized();
     });
-
-    _utageSubscription = _maiMusicDao.watchUtageSongs().listen((rows) {
-      _utageMusics = rows.map((r) => MusicRowMapper.fromUtageTable(r)).toList();
+    _utageSubscription = streams.utage.listen((list) {
+      _utageMusics = list;
       _checkInitialized();
     });
   }
@@ -75,7 +80,7 @@ class MaiMusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 从 OSS 拉取两个 JSON 并分别写入两表（经 MusicLibraryRepository）
+  /// 从 OSS 拉取两个 JSON 并分别写入两表（经 SyncMusicLibraryUsecase）
   Future<void> sync() async {
     if (_isLoading) return;
     _isLoading = true;
@@ -83,7 +88,7 @@ class MaiMusicProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _musicLibraryRepo.syncFromOss();
+      final result = await _syncUsecase.execute();
       if (result.normalCount > 0 || result.utageCount > 0) {
         final parts = <String>[];
         if (result.normalCount > 0) parts.add('普通 ${result.normalCount} 首');
@@ -96,7 +101,7 @@ class MaiMusicProvider extends ChangeNotifier {
         _toastProvider.show("曲库已是最新", ToastType.confirmed);
       }
     } catch (e) {
-      debugPrint('MaiMusicProvider: Sync failed: $e');
+      debugPrint('MusicLibraryController: Sync failed: $e');
       _toastProvider.show("同步失败: $e", ToastType.error);
     } finally {
       _isLoading = false;
@@ -131,3 +136,6 @@ class MaiMusicProvider extends ChangeNotifier {
         .toList();
   }
 }
+
+/// 兼容旧引用，UI 可继续使用 MaiMusicProvider 直到完成迁移。
+typedef MaiMusicProvider = MusicLibraryController;

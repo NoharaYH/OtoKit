@@ -22,7 +22,7 @@ class RootThemeCoordinator {
   }
 
   final GameProvider _gameProvider;
-  final MaiMusicProvider _maiMusicProvider;
+  final MusicLibraryController _maiMusicProvider;
   final NavigationProvider _navProvider;
 
   final ValueNotifier<AppTheme> resolvedTheme;
@@ -33,7 +33,7 @@ class RootThemeCoordinator {
 
   static AppTheme _compute(
     GameProvider gp,
-    MaiMusicProvider maiMusicProvider,
+    MusicLibraryController maiMusicProvider,
     NavigationProvider nav,
   ) {
     if (gp.isThemeGlobal) {

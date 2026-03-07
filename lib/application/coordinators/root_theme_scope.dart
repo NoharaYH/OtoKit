@@ -30,7 +30,7 @@ class _RootThemeScopeState extends State<RootThemeScope> {
   Widget build(BuildContext context) {
     _coordinator ??= RootThemeCoordinator(
       context.read<GameProvider>(),
-      context.read<MaiMusicProvider>(),
+      context.read<MusicLibraryController>(),
       context.read<NavigationProvider>(),
     );
     return Provider<RootThemeCoordinator>.value(
