@@ -1,35 +1,34 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:injectable/injectable.dart';
 import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../domain/entities/token_bundle.dart';
 import '../../domain/entities/vpn_start_config.dart';
 import '../../domain/entities/vpn_status.dart';
+import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/transfer_repository.dart';
 import '../../domain/repositories/vpn_repository.dart';
-import '../../kernel/config/chunithm_config.dart';
-import '../../kernel/config/endpoints.dart';
-import '../../kernel/config/env.dart';
-import '../../kernel/config/maimai_config.dart';
-import '../../kernel/config/system_config.dart';
-import '../../kernel/services/api_service.dart';
-import '../../kernel/services/maimai_html_parser.dart';
-import '../../kernel/services/storage_service.dart';
+import '../../domain/services/html_record_parser.dart';
+import '../../domain/value_objects/game_type.dart';
+import '../../infrastructure/network/oauth/pkce_helper.dart';
+import '../../shared/env/app_env.dart';
 import '../../ui/design_system/constants/strings.dart';
 
 /// TransferProvider：纯 UI 状态中转层。
 @injectable
 class TransferProvider extends ChangeNotifier {
   TransferProvider(
-    this._apiService,
-    this._storageService,
+    this._authRepo,
+    this._transferRepo,
     this._vpnRepo,
+    this._env,
+    this._htmlParser,
   ) {
     _loadTokens();
     _statusSubscription = _vpnRepo.statusStream.listen(_onVpnStatus);
@@ -37,9 +36,11 @@ class TransferProvider extends ChangeNotifier {
     _initDeepLinks();
   }
 
-  final ApiService _apiService;
-  final StorageService _storageService;
+  final AuthRepository _authRepo;
+  final TransferRepository _transferRepo;
   final VpnRepository _vpnRepo;
+  final AppEnv _env;
+  final HtmlRecordParser _htmlParser;
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   StreamSubscription<VpnStatus>? _statusSubscription;
@@ -114,14 +115,11 @@ class TransferProvider extends ChangeNotifier {
   void _initDeepLinks() {
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
       debugPrint('[DEEPLINK] Incoming: $uri');
-      // 统一入口: /oauth/callback
       if ((uri.scheme == 'https' || uri.scheme == 'otokit') &&
-          uri.host == SystemConfig.oauthDeepLinkHost &&
-          uri.path == SystemConfig.oauthCallbackPath) {
+          uri.host == _env.oauthDeepLinkHost &&
+          uri.path == _env.oauthCallbackPath) {
         final state = uri.queryParameters['state'];
         final code = uri.queryParameters['code'];
-
-        // 逻辑分发：识别 tenant=lxns
         if (state != null && code != null) {
           final decoded = utf8.decode(base64Url.decode(state));
           if (decoded.contains('tenant=lxns')) {
@@ -137,20 +135,18 @@ class TransferProvider extends ChangeNotifier {
   /// 发起落雪 OAuth 授权流程 (PKCE)
   /// [gameType]: 0 = maimai, 1 = chunithm
   Future<void> startLxnsOAuthFlow({int gameType = 0}) async {
-    _pkceVerifier = _generateRandomString(128);
-    final challenge = _computeChallenge(_pkceVerifier!);
+    _pkceVerifier = PkceHelper.generateVerifier();
+    final challenge = PkceHelper.computeChallenge(_pkceVerifier!);
 
     final state = base64Url.encode(
       utf8.encode(
-        "tenant=lxns&gameType=$gameType&nonce=${_generateRandomString(8)}",
+        "tenant=lxns&gameType=$gameType&nonce=${PkceHelper.generateVerifier(length: 8)}",
       ),
     );
 
-    // 统一 OAuth Scope：LXNS 采用通用权限标识，涵盖所有关联游戏
-    const String scope = SystemConfig.oauthScope;
-
-    const int oauthPort = SystemConfig.oauthPort;
-    const String redirectUri = SystemConfig.oauthRedirectUri;
+    final scope = _env.oauthScope;
+    final oauthPort = _env.oauthPort;
+    final redirectUri = _env.oauthRedirectUri;
 
     try {
       final server = await HttpServer.bind(
@@ -159,7 +155,7 @@ class TransferProvider extends ChangeNotifier {
         shared: true,
       );
       server.listen((HttpRequest request) async {
-        if (request.uri.path == SystemConfig.oauthCallbackPath) {
+        if (request.uri.path == _env.oauthCallbackPath) {
           final code = request.uri.queryParameters['code'];
           final stateParam = request.uri.queryParameters['state'];
           request.response
@@ -181,7 +177,6 @@ class TransferProvider extends ChangeNotifier {
           }
         }
       });
-      // 超时防护：5分钟后自动关闭监听
       Future.delayed(const Duration(minutes: 5), () {
         server.close(force: true);
       });
@@ -190,8 +185,8 @@ class TransferProvider extends ChangeNotifier {
     }
 
     final url = Uri.parse(
-      '${Endpoints.lxnsAuthorize}'
-      '?client_id=${Env.lxnsClientId}'
+      '${_env.lxnsAuthorizeUrl}'
+      '?client_id=${_env.lxnsClientId}'
       '&redirect_uri=${Uri.encodeComponent(redirectUri)}'
       '&response_type=code'
       '&scope=$scope'
@@ -220,39 +215,20 @@ class TransferProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _apiService.exchangeLxnsCode(
-        code,
-        Env.lxnsClientId,
-        Env.lxnsClientSecret,
-        _pkceVerifier!,
+      final result = await _authRepo.exchangeLxnsCode(code, _pkceVerifier!);
+      result.fold(
+        (bundle) {
+          lxnsToken = bundle.lxnsToken;
+          lxnsRefreshToken = bundle.lxnsRefreshToken;
+          _isLxnsOAuthDone = true;
+          _isLxnsVerified = true;
+          _pkceVerifier = null;
+          _successMessage = UiStrings.oauthSuccess;
+        },
+        (e) {
+          _errorMessage = UiStrings.oauthExchangeFailed;
+        },
       );
-
-      if (result != null) {
-        final accessToken = result['access_token'] as String;
-        final refreshToken = result['refresh_token'] as String?;
-
-        lxnsToken = accessToken;
-        lxnsRefreshToken = refreshToken;
-        _isLxnsOAuthDone = true;
-        _isLxnsVerified = true;
-
-        _pkceVerifier = null;
-
-        // 保存全局凭证（不再携带游戏类型后缀，或者统一使用主游戏 key）
-        await _storageService.save(
-          StorageService.kLxnsTokenPrefix,
-          accessToken,
-        );
-        if (refreshToken != null) {
-          await _storageService.save(
-            StorageService.kLxnsRefreshTokenPrefix,
-            refreshToken,
-          );
-        }
-        _successMessage = UiStrings.oauthSuccess;
-      } else {
-        _errorMessage = UiStrings.oauthExchangeFailed;
-      }
     } catch (e) {
       debugPrint('[OAuth] Token exchange exception: $e');
       _errorMessage = '[OAuth] 字符交换异常: $e';
@@ -260,23 +236,6 @@ class TransferProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  // PKCE Helper Functions
-  String _generateRandomString(int length) {
-    const chars =
-        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~';
-    final random = Random.secure();
-    return List.generate(
-      length,
-      (index) => chars[random.nextInt(chars.length)],
-    ).join();
-  }
-
-  String _computeChallenge(String verifier) {
-    final bytes = ascii.encode(verifier);
-    final digest = sha256.convert(bytes);
-    return base64Url.encode(digest.bytes).replaceAll('=', '');
   }
 
   void _handleLog(String msg) async {
@@ -293,25 +252,22 @@ class TransferProvider extends ChangeNotifier {
         final gameType = payload['gameType'] as int;
 
         if (gameType == 0) {
-          // Maimai
-          final records = MaimaiHtmlParser.parse(html);
+          final records = _htmlParser.parse(html);
           if (records.isNotEmpty) {
-            final response = await _apiService.uploadMaimaiRecords(
-              token,
-              records,
+            final result = await _transferRepo.uploadMaimaiRecords(token, records);
+            final label = (diff == 10) ? UiStrings.diffLabelUtage : "难度$diff";
+            result.fold(
+              (_) {
+                appendLog(
+                  "${UiStrings.logTagUpload} ${UiStrings.logUploadSuccess.replaceAll("{0}", UiStrings.modeDivingFish).replaceAll("{1}", label)}",
+                );
+              },
+              (e) {
+                appendLog(
+                  "${UiStrings.logTagError} ${UiStrings.logErrUpload.replaceAll("{0}", UiStrings.modeDivingFish).replaceAll("{1}", label).replaceAll("{2}", "400").replaceAll("{3}", e.message)}",
+                );
+              },
             );
-            if (response != null && response['message'] == '更新成功') {
-              final label = (diff == 10) ? UiStrings.diffLabelUtage : "难度$diff";
-              appendLog(
-                "${UiStrings.logTagUpload} ${UiStrings.logUploadSuccess.replaceAll("{0}", UiStrings.modeDivingFish).replaceAll("{1}", label)}",
-              );
-              // Java 侧会负责打印最终的完毕日志，此处不再冗余重复
-            } else {
-              final label = (diff == 10) ? UiStrings.diffLabelUtage : "难度$diff";
-              appendLog(
-                "${UiStrings.logTagError} ${UiStrings.logErrUpload.replaceAll("{0}", UiStrings.modeDivingFish).replaceAll("{1}", label).replaceAll("{2}", "400").replaceAll("{3}", response?['message'] ?? '未知错误')}",
-              );
-            }
           }
           // 重要：反馈给原生侧，解除同步锁，允许切换至落雪平台
           await _vpnRepo.notifyDivingFishTaskDone();
@@ -323,8 +279,8 @@ class TransferProvider extends ChangeNotifier {
       return;
     }
 
-    // 同时输出到 IDE 调试控制台，响应“控制台内部 print”要求
-    print(msg);
+    // 同时输出到 IDE 调试控制台
+    debugPrint(msg);
     _gameLogs[_trackingGameType!] =
         "${_gameLogs[_trackingGameType!] ?? ""}$msg\n";
 
@@ -351,28 +307,19 @@ class TransferProvider extends ChangeNotifier {
     final finalDfToken = (mode == 0 || mode == 1) ? dfToken : "";
     final finalLxnsToken = (mode == 2 || mode == 1) ? lxnsToken : "";
 
-    final String lxnsUploadPath = (_trackingGameType == 1)
-        ? ChunithmConfig.lxnsUploadPath
-        : MaimaiConfig.lxnsUploadPath;
+    final gameType = _trackingGameType ?? 0;
+    final gameConfig = _env.getTransferConfig(gameType);
+
     final String fullLxnsUploadUrl =
-        "${Endpoints.lxnsBaseUrl}/$lxnsUploadPath";
-
-    final String dfUploadPath = (_trackingGameType == 1)
-        ? ChunithmConfig.dfUploadPath
-        : MaimaiConfig.dfUploadPath;
-    final String fullDfUploadUrl = "${Endpoints.dfBaseUrl}/$dfUploadPath";
-
-    final String wahlapBaseUrl = (_trackingGameType == 1)
-        ? ChunithmConfig.wahlapBase
-        : MaimaiConfig.wahlapBase;
-    final String wahlapAuthLabel = (_trackingGameType == 1)
-        ? ChunithmConfig.wahlapAuthLabel
-        : MaimaiConfig.wahlapAuthLabel;
+        "${_env.lxnsBaseUrl}/${gameConfig.lxnsUploadPath}";
+    final String fullDfUploadUrl =
+        "${_env.divingFishBaseUrl}/${gameConfig.dfUploadPath}";
     final String fullWahlapAuthUrl =
-        "${Endpoints.wahlapAuthBaseUrl}$wahlapAuthLabel";
+        "${_env.wahlapAuthBaseUrl}${gameConfig.wahlapAuthLabel}";
+    final String wahlapBaseUrl = gameConfig.wahlapBase;
 
     final Map<int, String> fetchUrlMap = {};
-    if (_trackingGameType == 0) {
+    if (gameType == 0) {
       fetchUrlMap[-1] = "${wahlapBaseUrl}friend/userFriendCode/";
       fetchUrlMap[-2] = "${wahlapBaseUrl}record/";
       fetchUrlMap[10] =
@@ -395,9 +342,7 @@ class TransferProvider extends ChangeNotifier {
       }
     }
 
-    final List<String> genreList = (_trackingGameType == 1)
-        ? ChunithmConfig.genreList
-        : MaimaiConfig.genreList;
+    final List<String> genreList = gameConfig.genreList;
 
     final config = VpnStartConfig(
       dfToken: finalDfToken,
@@ -425,7 +370,7 @@ class TransferProvider extends ChangeNotifier {
     final randomStr = DateTime.now().millisecondsSinceEpoch
         .toRadixString(36)
         .substring(0, 8);
-    final localProxyUrl = "${SystemConfig.proxyBaseUrl}/$randomStr";
+    final localProxyUrl = "${_env.proxyBaseUrl}/$randomStr";
     await Clipboard.setData(ClipboardData(text: localProxyUrl));
 
     final wxUrl = Uri.parse("weixin://");
@@ -510,56 +455,35 @@ class TransferProvider extends ChangeNotifier {
 
   Future<void> _loadTokens() async {
     await Future.delayed(const Duration(milliseconds: 300));
-    final df = await _storageService.read(StorageService.kDivingFishToken);
-    if (df != null && df.isNotEmpty) {
-      dfToken = df;
+    final bundle = await _authRepo.loadTokenBundle();
+
+    if (bundle.dfToken.isNotEmpty) {
+      dfToken = bundle.dfToken;
       for (final gt in [0, 1]) {
         _isDivingFishVerifiedMap[gt] = true;
       }
     }
-
-    // 加载全局唯一 LXNS Token
-    final lxns = await _storageService.read(StorageService.kLxnsTokenPrefix);
-    final refresh = await _storageService.read(
-      StorageService.kLxnsRefreshTokenPrefix,
-    );
-
-    if (lxns != null && lxns.isNotEmpty) {
-      lxnsToken = lxns;
+    if (bundle.lxnsToken.isNotEmpty) {
+      lxnsToken = bundle.lxnsToken;
       _isLxnsVerified = true;
     }
-    if (refresh != null && refresh.isNotEmpty) {
-      lxnsRefreshToken = refresh;
+    if (bundle.lxnsRefreshToken != null && bundle.lxnsRefreshToken!.isNotEmpty) {
+      lxnsRefreshToken = bundle.lxnsRefreshToken;
     }
 
-    // Access Token 寿命 15 分钟，启动时若有 refresh_token 则静默续期
-    if (lxnsRefreshToken != null && lxnsRefreshToken!.isNotEmpty) {
-      try {
-        final refreshed = await _apiService.refreshLxnsToken(
-          lxnsRefreshToken!,
-          Env.lxnsClientId,
-          Env.lxnsClientSecret,
-        );
-        if (refreshed != null) {
-          lxnsToken = refreshed['access_token'] ?? lxnsToken;
-          lxnsRefreshToken = refreshed['refresh_token'] ?? lxnsRefreshToken;
+    if (bundle.canRefresh) {
+      final result = await _authRepo.refreshLxnsToken(bundle.lxnsRefreshToken!);
+      result.fold(
+        (newBundle) {
+          lxnsToken = newBundle.lxnsToken;
+          lxnsRefreshToken = newBundle.lxnsRefreshToken;
           _isLxnsVerified = true;
           _isLxnsOAuthDone = true;
-          await _storageService.save(
-            StorageService.kLxnsTokenPrefix,
-            lxnsToken,
-          );
-          await _storageService.save(
-            StorageService.kLxnsRefreshTokenPrefix,
-            lxnsRefreshToken!,
-          );
-        }
-      } catch (_) {
-        // 静默失败
-      }
+        },
+        (_) {},
+      );
     }
 
-    // 将当前激活游戏的 token 同步到公开字段
     _isStorageLoaded = true;
     notifyListeners();
   }
@@ -583,8 +507,11 @@ class TransferProvider extends ChangeNotifier {
       lxnsToken = lxns;
       _isLxnsVerified = false;
       _isLxnsOAuthDone = false;
-
-      _storageService.save(StorageService.kLxnsTokenPrefix, lxns);
+      _authRepo.saveTokenBundle(TokenBundle(
+        dfToken: dfToken,
+        lxnsToken: lxns,
+        lxnsRefreshToken: lxnsRefreshToken,
+      ));
     }
     notifyListeners();
   }
@@ -612,52 +539,44 @@ class TransferProvider extends ChangeNotifier {
       return false;
     }
 
-    try {
-      bool dfSuccess = _isDivingFishVerifiedMap[gameType] ?? false;
-      bool lxnsSuccess = _isLxnsVerified;
+    final game = gameType == 1 ? GameType.chunithm : GameType.maimai;
+    bool dfSuccess = _isDivingFishVerifiedMap[gameType] ?? false;
+    bool lxnsSuccess = _isLxnsVerified;
 
-      if (needsDf && !dfSuccess) {
-        dfSuccess = await _apiService.validateDivingFishToken(dfToken);
-        if (!dfSuccess) {
-          _errorMessage =
-              "${UiStrings.modeDivingFish} ${UiStrings.logTagAuth} 验证失败";
-          _isLoading = false;
-          notifyListeners();
-          return false;
-        }
+    if (needsDf && !dfSuccess) {
+      final r = await _authRepo.validateDivingFishToken(dfToken);
+      if (r.isFailure) {
+        _errorMessage =
+            "${UiStrings.modeDivingFish} ${UiStrings.logTagAuth} 验证失败";
+        _isLoading = false;
+        notifyListeners();
+        return false;
       }
-      if (needsLxns && !lxnsSuccess) {
-        lxnsSuccess = await _apiService.validateLxnsToken(
-          lxnsToken,
-          gameType: gameType,
-        );
-        if (!lxnsSuccess) {
-          _errorMessage = "${UiStrings.modeLxns} ${UiStrings.logTagAuth} 验证失败";
-          _isLoading = false;
-          notifyListeners();
-          return false;
-        }
-      }
-
-      _isDivingFishVerifiedMap[gameType] = dfSuccess;
-      _isLxnsVerified = lxnsSuccess;
-
-      if (dfSuccess) {
-        await _storageService.save(StorageService.kDivingFishToken, dfToken);
-      }
-      if (lxnsSuccess) {
-        await _storageService.save(StorageService.kLxnsTokenPrefix, lxnsToken);
-      }
-
-      _successMessage = UiStrings.verifySuccess;
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = "验证过程发生错误: $e";
-      _isLoading = false;
-      notifyListeners();
-      return false;
+      dfSuccess = true;
     }
+    if (needsLxns && !lxnsSuccess) {
+      final r = await _authRepo.validateLxnsToken(lxnsToken, game);
+      if (r.isFailure) {
+        _errorMessage = "${UiStrings.modeLxns} ${UiStrings.logTagAuth} 验证失败";
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      lxnsSuccess = true;
+    }
+
+    _isDivingFishVerifiedMap[gameType] = dfSuccess;
+    _isLxnsVerified = lxnsSuccess;
+
+    await _authRepo.saveTokenBundle(TokenBundle(
+      dfToken: dfToken,
+      lxnsToken: lxnsToken,
+      lxnsRefreshToken: lxnsRefreshToken,
+    ));
+
+    _successMessage = UiStrings.verifySuccess;
+    _isLoading = false;
+    notifyListeners();
+    return true;
   }
 }

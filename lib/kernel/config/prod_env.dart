@@ -1,8 +1,11 @@
 import 'package:injectable/injectable.dart';
 
+import '../../shared/config/transfer_game_config.dart';
 import '../../shared/env/app_env.dart';
+import 'chunithm_config.dart';
 import 'endpoints.dart';
 import 'env.dart';
+import 'maimai_config.dart';
 import 'system_config.dart';
 
 @lazySingleton
@@ -25,6 +28,15 @@ class ProdEnv implements AppEnv {
   String get oauthRedirectUri => SystemConfig.oauthRedirectUri;
 
   @override
+  String get oauthScope => SystemConfig.oauthScope;
+
+  @override
+  String get oauthDeepLinkHost => SystemConfig.oauthDeepLinkHost;
+
+  @override
+  String get proxyBaseUrl => SystemConfig.proxyBaseUrl;
+
+  @override
   String get lxnsBaseUrl => Endpoints.lxnsBaseUrl;
 
   @override
@@ -38,4 +50,24 @@ class ProdEnv implements AppEnv {
 
   @override
   String get wahlapAuthBaseUrl => Endpoints.wahlapAuthBaseUrl;
+
+  @override
+  TransferGameConfig getTransferConfig(int gameType) {
+    if (gameType == 1) {
+      return TransferGameConfig(
+        lxnsUploadPath: ChunithmConfig.lxnsUploadPath,
+        dfUploadPath: ChunithmConfig.dfUploadPath,
+        wahlapBase: ChunithmConfig.wahlapBase,
+        wahlapAuthLabel: ChunithmConfig.wahlapAuthLabel,
+        genreList: ChunithmConfig.genreList,
+      );
+    }
+    return TransferGameConfig(
+      lxnsUploadPath: MaimaiConfig.lxnsUploadPath,
+      dfUploadPath: MaimaiConfig.dfUploadPath,
+      wahlapBase: MaimaiConfig.wahlapBase,
+      wahlapAuthLabel: MaimaiConfig.wahlapAuthLabel,
+      genreList: MaimaiConfig.genreList,
+    );
+  }
 }

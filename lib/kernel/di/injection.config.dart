@@ -20,11 +20,19 @@ import '../../application/shared/game_provider.dart' as _i822;
 import '../../application/shared/navigation_provider.dart' as _i155;
 import '../../application/shared/toast_provider.dart' as _i533;
 import '../../application/transfer/transfer_provider.dart' as _i1034;
+import '../../domain/repositories/auth_repository.dart' as _i1073;
+import '../../domain/repositories/transfer_repository.dart' as _i395;
 import '../../domain/repositories/vpn_repository.dart' as _i1017;
+import '../../domain/services/html_record_parser.dart' as _i743;
 import '../../infrastructure/native/channel/vpn_channel_gateway.dart' as _i106;
 import '../../infrastructure/network/clients/divingfish_api_client.dart'
     as _i586;
 import '../../infrastructure/network/clients/lxns_api_client.dart' as _i937;
+import '../../infrastructure/parsers/maimai_html_parser_impl.dart' as _i964;
+import '../../infrastructure/storage/repositories_impl/auth_repository_impl.dart'
+    as _i1013;
+import '../../infrastructure/storage/repositories_impl/transfer_repository_impl.dart'
+    as _i39;
 import '../../logic/mai_music_data/data_sync/mai_oss_sync_handler.dart'
     as _i790;
 import '../../shared/env/app_env.dart' as _i187;
@@ -48,6 +56,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i790.MaiOssSyncHandler>(() => _i790.MaiOssSyncHandler());
     gh.lazySingleton<_i533.ToastProvider>(() => _i533.ToastProvider());
     gh.lazySingleton<_i106.VpnChannelGateway>(() => _i106.VpnChannelGateway());
+    gh.lazySingleton<_i964.MaimaiHtmlParserImpl>(
+      () => _i964.MaimaiHtmlParserImpl(),
+    );
     gh.lazySingleton<_i543.ProdEnv>(() => const _i543.ProdEnv());
     gh.lazySingleton<_i361.Dio>(() => registerModule.dio);
     gh.lazySingleton<_i558.FlutterSecureStorage>(
@@ -66,7 +77,19 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i306.StorageService>(
       () => _i306.StorageService(gh<_i558.FlutterSecureStorage>()),
     );
+    gh.lazySingleton<_i39.TransferRepositoryImpl>(
+      () => _i39.TransferRepositoryImpl(gh<_i586.DivingFishApiClient>()),
+    );
     gh.lazySingleton<_i137.ApiService>(() => _i137.ApiService(gh<_i361.Dio>()));
+    gh.factory<_i1034.TransferProvider>(
+      () => _i1034.TransferProvider(
+        gh<_i1073.AuthRepository>(),
+        gh<_i395.TransferRepository>(),
+        gh<_i1017.VpnRepository>(),
+        gh<_i187.AppEnv>(),
+        gh<_i743.HtmlRecordParser>(),
+      ),
+    );
     gh.factory<_i1008.MaiMusicProvider>(
       () => _i1008.MaiMusicProvider(
         gh<_i80.MaiMusicDao>(),
@@ -74,11 +97,11 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i533.ToastProvider>(),
       ),
     );
-    gh.factory<_i1034.TransferProvider>(
-      () => _i1034.TransferProvider(
-        gh<_i137.ApiService>(),
+    gh.lazySingleton<_i1013.AuthRepositoryImpl>(
+      () => _i1013.AuthRepositoryImpl(
+        gh<_i937.LxnsApiClient>(),
+        gh<_i586.DivingFishApiClient>(),
         gh<_i306.StorageService>(),
-        gh<_i1017.VpnRepository>(),
       ),
     );
     gh.factory<_i822.GameProvider>(
