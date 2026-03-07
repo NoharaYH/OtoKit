@@ -3,7 +3,7 @@ import 'package:injectable/injectable.dart';
 import '../../../domain/entities/token_bundle.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/value_objects/game_type.dart';
-import '../../../kernel/services/storage_service.dart';
+import '../secure/storage_service.dart';
 import '../../../shared/errors/auth_exception.dart';
 import '../../../shared/result/result.dart';
 import '../../network/clients/divingfish_api_client.dart';

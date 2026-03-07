@@ -1,16 +1,7 @@
-/// 启动页偏好两段式路径数据模型
-///
-/// 格式：Primary:Secondary
-/// 示例：
-///   Sync:Mai     -> 启动直接进入舞萌成绩同步
-///   Sync:Chu     -> 启动直接进入中二节奏成绩同步
-///   Detail:Mai   -> 启动进入舞萌歌曲详情
-///   Detail:Chu   -> 启动进入中二节奏歌曲详情
-///   Last:None    -> 启动完全以退出时页面为准（全回溯）
-///
-/// 此文件不引入任何 Flutter/UI 依赖，ONLY 为纯 Dart 数据结构。
-
-// ── 枚举定义 ──────────────────────────────────────────────────────────────────
+// 启动页偏好两段式路径数据模型。
+// 格式：Primary:Secondary
+// 示例：Sync:Mai、Detail:Mai、Last:None（全回溯）
+// 此文件不引入任何 Flutter/UI 依赖，ONLY 为纯 Dart 数据结构。
 
 enum StartupPrimary {
   sync,

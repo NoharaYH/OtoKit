@@ -46,13 +46,7 @@ class OssApiClient {
         ),
       );
       if (response.statusCode == 200 && response.data != null) {
-        final data = response.data!;
-        if (data is List<dynamic>) {
-          return Result.success(data);
-        }
-        return Result.failure(
-          NetworkException.serverError(200, message: '响应格式非 JSON 数组'),
-        );
+        return Result.success(response.data!);
       }
       return Result.failure(NetworkException.serverError(
         response.statusCode,

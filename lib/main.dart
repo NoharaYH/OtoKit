@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'kernel/di/injection.dart';
+import 'bootstrap/di/injection.dart';
 import 'ui/pages/root_page.dart';
 import 'application/bootstrap/startup_bootstrap.dart';
 import 'application/coordinators/root_theme_scope.dart';

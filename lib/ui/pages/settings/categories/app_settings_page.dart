@@ -1,6 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../kernel/models/startup_pref_model.dart';
+import '../../../../shared/models/startup_pref_model.dart';
 import '../../../../application/shared/game_provider.dart';
 import '../../../design_system/constants/sizes.dart';
 import '../../../design_system/theme/core/app_theme.dart';

@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
 
-import '../../kernel/models/startup_pref_model.dart';
-import '../../kernel/models/theme_preferences_model.dart';
-import '../../kernel/services/storage_service.dart';
+import '../../shared/models/startup_pref_model.dart';
+import '../../shared/models/theme_preferences_model.dart';
+import '../../infrastructure/storage/secure/storage_service.dart';
 import '../../ui/design_system/theme/core/app_theme.dart';
 import 'navigation_provider.dart';
 

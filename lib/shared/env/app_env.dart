@@ -1,7 +1,7 @@
 import '../config/transfer_game_config.dart';
 
 /// 运行时环境配置接口，供 infrastructure 与 application 使用。
-/// 实现放在 kernel/config（ProdEnv），由 DI 注册。
+/// 实现放在 bootstrap/config（ProdEnv），由 DI 注册。
 abstract class AppEnv {
   String get lxnsClientId;
   String get lxnsClientSecret;

@@ -1,5 +1,5 @@
 /// 基础设施静态常量，仅允许 infrastructure/ 与 bootstrap/ 引用。
-/// 从 kernel/config 迁出，避免 application 层引用。
+/// 从 bootstrap/config 迁出，避免 application 层引用。
 class InfraConstants {
   InfraConstants._();
 

@@ -11,7 +11,7 @@ abstract class RegisterModule {
       receiveTimeout: const Duration(seconds: 30),
       headers: {
         "User-Agent":
-            "Mozilla/5.0 (Linux; Android 13; KB2000 Build/UKQ1.230917.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 XWEB/1160065 MMWEBSDK/20231202 MMWEBID/2143 MicroMessenger/8.0.47.2560(0x28002F30) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64",
+            "Mozilla/5.0 (Linux; Android 13; KB2000 Build/UKQ1.230917.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 XWEB/1160065 MMWEBSDK/20231202 MMWEBID/20231202 MicroMessenger/8.0.47.2560 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64",
       },
     ),
   );
