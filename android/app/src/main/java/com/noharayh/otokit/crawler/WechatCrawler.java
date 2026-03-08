@@ -6,16 +6,9 @@ import static com.noharayh.otokit.crawler.CrawlerCaller.onError;
 import static com.noharayh.otokit.crawler.CrawlerCaller.startAuth;
 import static com.noharayh.otokit.crawler.CrawlerCaller.writeLog;
 
-import android.os.Environment;
 import android.util.Log;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,7 +81,7 @@ public class WechatCrawler {
         if (com.noharayh.otokit.DataContext.GameType == 1) {
             String label;
             if (diff == 4) label = "ULTIMA";
-            else if (diff == 5 || diff == 10) label = "U·TA·GE"; // 语义统一
+            else if (diff == 5 || diff == 10) label = "WORLD's END"; // 中二 WORLD's END
             else label = diffMap.getOrDefault(diff, "难度" + diff);
             return label.toUpperCase(); // 中二难度文字全部改为大写
         }
@@ -268,28 +261,10 @@ public class WechatCrawler {
         try (Response response = client.newCall(request).execute()) {
             String html = Objects.requireNonNull(response.body()).string();
             htmlCache.put(diff, html);
-            saveHtmlToDownload(diff, html);
             boolean isSilent = diff < 0; // 用户信息(-1)和最近游玩(-2)静默
             if (!isSilent) writeLog("[DOWNLOAD] 已获取" + label + "数据");
         } catch (Exception e) {
             writeLog("[ERROR] 获取" + label + "失败: 异常 - " + e.getMessage());
-        }
-    }
-
-    /** 将 HTML 以 [HH:MM:SS]{难度}.html 命名保存到应用专属 Download 目录（避免 Android 10+ scoped storage EPERM） */
-    private static void saveHtmlToDownload(int diff, String html) {
-        if (com.noharayh.otokit.DataContext.AppContext == null) return;
-        try {
-            File downloadDir = com.noharayh.otokit.DataContext.AppContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-            if (downloadDir == null || (!downloadDir.exists() && !downloadDir.mkdirs())) return;
-            String time = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
-            String fileName = "[" + time + "]" + diff + ".html";
-            File file = new File(downloadDir, fileName);
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                fos.write(html.getBytes(StandardCharsets.UTF_8));
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "saveHtmlToDownload failed: " + e.getMessage());
         }
     }
 
