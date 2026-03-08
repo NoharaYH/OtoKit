@@ -60,10 +60,10 @@ class MainActivity : FlutterActivity(),
                     if (fetchUrls != null) {
                         DataContext.FetchUrlMap.clear()
                         fetchUrls.forEach { (k, v) ->
-                            if (k is Int && v is String) {
-                                DataContext.FetchUrlMap[k] = v
-                            } else if (k is Long && v is String) {
-                                DataContext.FetchUrlMap[k.toInt()] = v
+                            when {
+                                k is Int && v is String -> DataContext.FetchUrlMap[k] = v
+                                k is Long && v is String -> DataContext.FetchUrlMap[k.toInt()] = v
+                                k is String && v is String -> k.toIntOrNull()?.let { DataContext.FetchUrlMap[it] = v }
                             }
                         }
                     }
