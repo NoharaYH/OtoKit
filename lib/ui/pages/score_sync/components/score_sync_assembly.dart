@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../design_system/theme/domain_theme/theme_mai/circle.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -117,12 +117,22 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
       onDfPaste: (text) {
         dfController.text = text;
         provider.resetVerification(gameType: widget.gameType, df: true);
+        // 双平台：粘贴时即持久化，避免用户先 OAuth 再验证时 exchangeLxnsCode 覆盖掉未保存的 dfToken
+        if (widget.mode == 1 && text.trim().isNotEmpty) {
+          provider.updateTokens(df: text.trim());
+        }
       },
       onLxnsPaste: (text) {
         lxnsController.text = text;
         provider.resetVerification(gameType: widget.gameType, lxns: true);
       },
-      onLxnsOAuth: () => provider.startLxnsOAuthFlow(gameType: widget.gameType),
+      onLxnsOAuth: () {
+        // 双平台：OAuth 前先持久化已输入的水鱼 Token，否则 exchangeLxnsCode 保存时 loadTokenBundle 取不到
+        if (widget.mode == 1 && dfController.text.trim().isNotEmpty) {
+          provider.updateTokens(df: dfController.text.trim());
+        }
+        provider.startLxnsOAuthFlow(gameType: widget.gameType);
+      },
     );
   }
 

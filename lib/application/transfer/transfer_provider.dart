@@ -462,19 +462,24 @@ class TransferController extends ChangeNotifier {
   }
 
   void updateTokens({int? gameType, String? df, String? lxns}) {
+    bool needsSave = false;
     if (df != null) {
       dfToken = df;
       for (final gt in [0, 1]) {
         _isDivingFishVerifiedMap[gt] = false;
       }
+      needsSave = true;
     }
     if (lxns != null) {
       lxnsToken = lxns;
       _isLxnsVerified = false;
       _isLxnsOAuthDone = false;
+      needsSave = true;
+    }
+    if (needsSave) {
       _authRepo.saveTokenBundle(TokenBundle(
         dfToken: dfToken,
-        lxnsToken: lxns,
+        lxnsToken: lxnsToken,
         lxnsRefreshToken: lxnsRefreshToken,
       ));
     }

@@ -5,5 +5,6 @@ class VpnStatus {
   final bool isRunning;
   final String? statusText;
 
-  bool get isDone => statusText == 'done' || !isRunning;
+  /// 仅以 statusText 判定传分结束，避免 VPN 主动关闭（Crawler 拉取前释放隧道）被误判为完成。
+  bool get isDone => statusText == 'done' || statusText == '传分完成';
 }

@@ -41,7 +41,11 @@ class HandleNativeLogUsecase {
 
       final r = await _transferRepo.uploadMaimaiRecords(token, records);
       await _vpnRepo.notifyDivingFishTaskDone();
-      return HandleLogResult.upload(r.isSuccess ? '上传成功' : '上传失败');
+      final msg = r.fold(
+        (_) => '[水鱼] 上传U·TA·GE成功 [200]',
+        (e) => '[水鱼] 上传U·TA·GE失败 [${e.statusCode ?? '?'}]',
+      );
+      return HandleLogResult.upload(msg);
     } catch (_) {
       await _vpnRepo.notifyDivingFishTaskDone();
       rethrow;

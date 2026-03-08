@@ -5,6 +5,9 @@ import 'app_exception.dart';
 abstract class NetworkException extends AppException {
   const NetworkException(super.message, {super.cause});
 
+  /// 非 2xx 响应的状态码，仅 _NetworkServerError 有值。
+  int? get statusCode => null;
+
   factory NetworkException.timeout({String message = '请求超时', dynamic cause}) =>
       _NetworkTimeout(message, cause: cause);
 
@@ -24,6 +27,9 @@ class _NetworkConnection extends NetworkException {
 }
 
 class _NetworkServerError extends NetworkException {
-  const _NetworkServerError(this.statusCode, super.message, {super.cause});
-  final int? statusCode;
+  const _NetworkServerError(this._statusCode, super.message, {super.cause});
+  final int? _statusCode;
+
+  @override
+  int? get statusCode => _statusCode;
 }

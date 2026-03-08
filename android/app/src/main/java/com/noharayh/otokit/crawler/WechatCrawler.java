@@ -123,7 +123,7 @@ public class WechatCrawler {
             int code = response.code();
             boolean isSilent = diff < 0; // 用户信息(-1)和最近游玩(-2)静默
             if (code >= 200 && code < 300) {
-                if (!isSilent) writeLog("[UPLOAD] [水鱼] 上传" + getDiffLabel(diff) + "成功");
+                if (!isSilent) writeLog("[UPLOAD] [水鱼] 上传" + getDiffLabel(diff) + "成功 [" + code + "]");
             } else {
                 String body = response.body() != null ? response.body().string() : "";
                 writeLog("[ERROR] [水鱼] 上传" + getDiffLabel(diff) + "失败: " + code + " - " + body);
@@ -148,7 +148,7 @@ public class WechatCrawler {
             int code = response.code();
             boolean isSilent = diff < 0; // 用户信息(-1)和最近游玩(-2)静默
             if (code >= 200 && code < 300) {
-                if (!isSilent) writeLog("[UPLOAD] [落雪] 上传" + getDiffLabel(diff) + "成功");
+                if (!isSilent) writeLog("[UPLOAD] [落雪] 上传" + getDiffLabel(diff) + "成功 [" + code + "]");
             } else {
                 String body = response.body() != null ? response.body().string() : "";
                 writeLog("[ERROR] [落雪] 上传" + getDiffLabel(diff) + "失败: " + code + " - " + body);
