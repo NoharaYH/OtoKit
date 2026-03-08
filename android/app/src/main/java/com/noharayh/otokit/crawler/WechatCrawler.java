@@ -116,6 +116,12 @@ public class WechatCrawler {
         String url = com.noharayh.otokit.DataContext.DfUploadUrl;
         if (url == null || url.isEmpty()) return;
 
+        // 中二 World's End：水鱼 Python 解析器仅查找 music_title，而官方页面使用 musiclist_worldsend_title
+        // 在 class 中补充 music_title 以兼容服务端解析
+        if (com.noharayh.otokit.DataContext.GameType == 1 && diff == 5) {
+            htmlData = htmlData.replace("class=\"musiclist_worldsend_title\"", "class=\"musiclist_worldsend_title music_title\"");
+        }
+
         Request request = new Request.Builder()
                 .url(url)
                 .addHeader("Import-Token", token)

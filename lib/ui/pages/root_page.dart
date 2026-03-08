@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
+import '../../../application/coordinators/resolved_theme_bundle.dart';
 import '../../../application/coordinators/root_theme_coordinator.dart';
 import '../../../application/shared/game_provider.dart';
 import '../../../application/shared/navigation_provider.dart';
@@ -13,7 +14,6 @@ import '../design_system/kit_navigation/nav_deck_overlay.dart';
 import '../design_system/constants/sizes.dart';
 import '../design_system/kit_shared/kit_action_circle.dart';
 import '../design_system/page_shell.dart';
-import '../design_system/theme/core/app_theme.dart';
 
 class RootPage extends StatefulWidget {
   const RootPage({super.key});
@@ -74,11 +74,12 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
         children: [
           RepaintBoundary(
             key: _repaintBoundaryKey,
-            child: ValueListenableBuilder<AppTheme>(
-              valueListenable: coordinator.resolvedTheme,
-              builder: (context, theme, _) {
+            child: ValueListenableBuilder<ResolvedThemeBundle>(
+              valueListenable: coordinator.resolvedBundle,
+              builder: (context, bundle, _) {
+                final theme = bundle.theme;
                 return PageShell(
-                  backgroundOverride: theme.buildBackground(context),
+                  backgroundOverride: bundle.buildBackground(context),
                   child: Stack(
                     children: [
                       Consumer<NavigationProvider>(
