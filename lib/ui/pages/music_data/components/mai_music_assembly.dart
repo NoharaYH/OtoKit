@@ -20,7 +20,10 @@ class _MaiMusicAssemblyState extends State<MaiMusicAssembly> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MaiMusicProvider>(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: Consumer<MaiMusicProvider>(
       builder: (context, provider, child) {
         if (!provider.isInitialized) {
           return const Center(child: CircularProgressIndicator());
@@ -98,6 +101,8 @@ class _MaiMusicAssemblyState extends State<MaiMusicAssembly> {
           },
         );
       },
+        ),
+      ),
     );
   }
 }

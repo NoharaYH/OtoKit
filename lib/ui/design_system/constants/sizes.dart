@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'responsive_layout_scope.dart';
 
 class UiSizes {
   // --- Global Layout Multipliers ---
@@ -37,7 +38,13 @@ class UiSizes {
   static const double scoreSyncUsedHeightLxns = 464.0;
 
   // --- Layout Calculations ---
-  static double getHorizontalMargin(BuildContext context) => screenEdgeMargin;
+  static double getHorizontalMargin(BuildContext context) {
+    final scope = ResponsiveLayoutScope.maybeOf(context);
+    if (scope == null) return screenEdgeMargin;
+    if (scope.primaryPaneWidth > 840) return spaceXL;
+    if (scope.primaryPaneWidth > 600) return spaceL;
+    return screenEdgeMargin;
+  }
 
   static double getTopMargin(BuildContext context) {
     return MediaQuery.of(context).size.height * shellMarginTopMultiplier;

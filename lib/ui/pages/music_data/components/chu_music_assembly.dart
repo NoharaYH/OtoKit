@@ -7,17 +7,20 @@ class ChuMusicAssembly extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.construction, size: 48, color: UiColors.grey500),
-          SizedBox(height: 16),
-          Text(
-            UiStrings.chuMusicDev,
-            style: TextStyle(color: UiColors.grey500, fontSize: 16),
-          ),
-        ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.construction, size: 48, color: UiColors.grey500),
+            SizedBox(height: 16),
+            Text(
+              UiStrings.chuMusicDev,
+              style: TextStyle(color: UiColors.grey500, fontSize: 16),
+            ),
+          ],
+        ),
       ),
     );
   }

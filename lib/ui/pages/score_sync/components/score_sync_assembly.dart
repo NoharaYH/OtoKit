@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../design_system/constants/sizes.dart';
 import '../../../design_system/constants/colors.dart';
+import '../../../design_system/constants/responsive_layout_scope.dart';
 import '../../../design_system/theme/core/app_theme.dart';
 import '../../../design_system/kit_score_sync/score_sync_card.dart';
 import '../../../design_system/kit_score_sync/score_sync_form.dart';
@@ -100,8 +101,11 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
     TransferProvider provider,
     bool isOtherTracking,
   ) {
-    return ScoreSyncForm(
-      key: ValueKey('Form_${widget.gameType}_${widget.mode}'),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: ScoreSyncForm(
+          key: ValueKey('Form_${widget.gameType}_${widget.mode}'),
       mode: widget.mode,
       dfController: dfController,
       lxnsController: lxnsController,
@@ -133,6 +137,8 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
         }
         provider.startLxnsOAuthFlow(gameType: widget.gameType);
       },
+        ),
+      ),
     );
   }
 
@@ -145,10 +151,12 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
         provider.isTracking && provider.trackingGameType == widget.gameType;
     final isOtherTracking =
         provider.isTracking && provider.trackingGameType != widget.gameType;
+    final availablePaneCount =
+        ResponsiveLayoutScope.maybeOf(context)?.availablePaneCount ?? 1;
 
-    return Column(
-      key: ValueKey<String>('Success_${widget.gameType}'),
+    final Widget header = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           widget.gameType == 0 ? "选择导入难度" : "中二传分设置",
@@ -168,8 +176,11 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
             vertical: UiSizes.atomicComponentGap,
           ),
         ),
-        if (widget.gameType == 0)
-          MaiDifChoice(
+      ],
+    );
+
+    final Widget difChoice = widget.gameType == 0
+        ? MaiDifChoice(
             isLoading: isCurrentTracking,
             isDisabled: isOtherTracking,
             onImport: (diffs) {
@@ -180,8 +191,7 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
               );
             },
           )
-        else
-          ChuDifChoice(
+        : ChuDifChoice(
             isLoading: isCurrentTracking,
             isDisabled: isOtherTracking,
             onImport: (diffs) {
@@ -191,27 +201,54 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
                 difficulties: diffs,
               );
             },
+          );
+
+    // 日志面板展开时填满卡片剩余空间，触底由外部卡片 margin 保证
+    final Widget logPanel = SyncLogPanel(
+      key: ValueKey('Log_${widget.gameType}'),
+      logs: provider.getVpnLog(widget.gameType),
+      isTracking: isCurrentTracking,
+      estimatedUsedHeight: availablePaneCount >= 2
+          ? 0
+          : (widget.gameType == 0
+              ? UiSizes.scoreSyncUsedHeightMai
+              : UiSizes.scoreSyncUsedHeightLxns),
+      onCopy: () {
+        final currentLogs = provider.getVpnLog(widget.gameType);
+        Clipboard.setData(ClipboardData(text: currentLogs));
+        provider.appendLog('[COPY]已将控制台内容复制到剪切板');
+      },
+      onClose: () => provider.stopVpn(isManually: true),
+      onConfirmPause: () => provider.appendLog('[PAUSE]传分业务已暂停'),
+      onConfirmResume: () => provider.appendLog('[RESUME]传分业务继续'),
+    );
+
+    if (availablePaneCount >= 2) {
+      return Row(
+        key: ValueKey<String>('Success_${widget.gameType}'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [header, difChoice],
+            ),
           ),
+          const SizedBox(width: UiSizes.spaceS),
+          Expanded(flex: 3, child: logPanel),
+        ],
+      );
+    }
+
+    return Column(
+      key: ValueKey<String>('Success_${widget.gameType}'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        difChoice,
         const SizedBox(height: UiSizes.spaceS),
-        // 日志面板展开时填满卡片剩余空间，触底由外部卡片 margin 保证
-        Expanded(
-          child: SyncLogPanel(
-            key: ValueKey('Log_${widget.gameType}'),
-            logs: provider.getVpnLog(widget.gameType),
-            isTracking: isCurrentTracking,
-            estimatedUsedHeight: widget.gameType == 0
-                ? UiSizes.scoreSyncUsedHeightMai
-                : UiSizes.scoreSyncUsedHeightLxns,
-            onCopy: () {
-              final currentLogs = provider.getVpnLog(widget.gameType);
-              Clipboard.setData(ClipboardData(text: currentLogs));
-              provider.appendLog('[COPY]已将控制台内容复制到剪切板');
-            },
-            onClose: () => provider.stopVpn(isManually: true),
-            onConfirmPause: () => provider.appendLog('[PAUSE]传分业务已暂停'),
-            onConfirmResume: () => provider.appendLog('[RESUME]传分业务继续'),
-          ),
-        ),
+        Expanded(child: logPanel),
       ],
     );
   }

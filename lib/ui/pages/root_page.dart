@@ -10,9 +10,7 @@ import '../../../application/shared/navigation_provider.dart';
 import 'music_data/music_data_page.dart';
 import 'score_sync/score_sync_page.dart';
 import 'settings/settings_page.dart';
-import '../design_system/kit_navigation/nav_deck_overlay.dart';
-import '../design_system/constants/sizes.dart';
-import '../design_system/kit_shared/kit_action_circle.dart';
+import '../design_system/otokit_responsive_shell.dart';
 import '../design_system/page_shell.dart';
 
 class RootPage extends StatefulWidget {
@@ -77,13 +75,15 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
             child: ValueListenableBuilder<ResolvedThemeBundle>(
               valueListenable: coordinator.resolvedBundle,
               builder: (context, bundle, _) {
-                final theme = bundle.theme;
                 return PageShell(
                   backgroundOverride: bundle.buildBackground(context),
-                  child: Stack(
-                    children: [
-                      Consumer<NavigationProvider>(
-                        builder: (context, nav, child) {
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      extensions: [bundle.theme],
+                    ),
+                    child: OtokitResponsiveShell(
+                      child: Consumer<NavigationProvider>(
+                        builder: (context, nav, _) {
                           final Widget page;
                           switch (nav.currentTag) {
                             case PageTag.scoreSync:
@@ -119,80 +119,14 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
                           );
                         },
                       ),
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: MediaQuery.of(context).size.width * 0.04,
-                        child: Consumer<NavigationProvider>(
-                          builder: (context, nav, child) {
-                            return GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onPanUpdate: (details) {
-                                if (details.delta.dx > 5 && !nav.isDeckOpen) {
-                                  nav.openDeck(
-                                    anchorY: details.globalPosition.dy,
-                                  );
-                                }
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      Positioned(
-                        top: UiSizes.getTopMarginWithSafeArea(context) + 12.0,
-                        right: UiSizes.getHorizontalMargin(context) + 12.0,
-                        child: Consumer<NavigationProvider>(
-                          builder: (context, nav, child) {
-                            final themeColor = theme.basic;
-                            return Container(
-                              padding: EdgeInsets.zero,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  KitActionCircle(
-                                    icon: Icons.settings,
-                                    color: themeColor,
-                                    onTap: () => nav.openSettings(),
-                                  ),
-                                  const SizedBox(width: UiSizes.spaceS),
-                                  Builder(
-                                    builder: (btnCtx) => KitActionCircle(
-                                      icon: Icons.menu_open,
-                                      color: themeColor,
-                                      onTap: () {
-                                        final RenderBox box = btnCtx
-                                            .findRenderObject() as RenderBox;
-                                        final position =
-                                            box.localToGlobal(Offset.zero);
-                                        nav.openDeck(
-                                          anchorY: position.dy + box.size.height,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      Theme(
-                        data: Theme.of(context).copyWith(
-                          extensions: [theme],
-                        ),
-                        child: const Positioned.fill(
-                          child: NavDeckOverlay(),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 );
               },
             ),
           ),
           Consumer<NavigationProvider>(
-            builder: (context, nav, child) {
+            builder: (context, nav, _) {
               return AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 switchInCurve: Curves.easeOutCubic,
