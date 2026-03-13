@@ -275,44 +275,56 @@ class _TabletExpandedLayoutState extends State<_TabletExpandedLayout>
 
         return Stack(
           children: [
-            // 1. 玻璃层（含偏移动画）+ content + 设置按钮
+            // 1. 玻璃层（含偏移动画）+ 两侧热区（宽度随 offset 收缩，不盖住 glass）
             AnimatedBuilder(
               animation: _glassOffsetCurve,
               builder: (context, _) {
                 final offsetX =
                     _startOffsetX +
                     (_endOffsetX - _startOffsetX) * _glassOffsetCurve.value;
-                return Positioned(
-                  top: top,
-                  left: _tabletGlassMargin + offsetX,
-                  right: _tabletGlassMargin - offsetX,
-                  bottom: 0,
-                  child: _buildTabletGlassChild(context),
+                final leftHotWidth =
+                    (_tabletGlassMargin + offsetX).clamp(0.0, double.infinity);
+                final rightHotWidth =
+                    (_tabletGlassMargin - offsetX).clamp(0.0, double.infinity);
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: top,
+                      left: _tabletGlassMargin + offsetX,
+                      right: _tabletGlassMargin - offsetX,
+                      bottom: 0,
+                      child: _buildTabletGlassChild(
+                        context,
+                        onBlankTap: (ctrl.isOpen && !ctrl.isClosing)
+                            ? () => ctrl.close()
+                            : null,
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: leftHotWidth,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => ctrl.open(0),
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: rightHotWidth,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => ctrl.open(1),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
-            // 2. 两侧点击热区
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: _tabletGlassMargin,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => ctrl.open(0),
-              ),
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: _tabletGlassMargin,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => ctrl.open(1),
-              ),
-            ),
-            // 3. 侧边栏（leaving + entry）
+            // 2. 侧边栏（leaving + entry）
             if (ctrl.isOpen) ...[
               if (ctrl.leavingSide != null)
                 TabletSidebarMinimal(
@@ -330,29 +342,26 @@ class _TabletExpandedLayoutState extends State<_TabletExpandedLayout>
                 onLeaveComplete: ctrl.isClosing ? ctrl.finalizeClose : null,
               ),
             ],
-            // 4. 侧边栏打开且未关闭中时，点击玻璃区域收回
-            if (ctrl.isOpen && !ctrl.isClosing)
-              Positioned(
-                top: top,
-                left: _tabletGlassMargin,
-                right: _tabletGlassMargin,
-                bottom: 0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => ctrl.close(),
-                ),
-              ),
           ],
         );
       },
     );
   }
 
-  Widget _buildTabletGlassChild(BuildContext context) {
+  Widget _buildTabletGlassChild(BuildContext context,
+      {VoidCallback? onBlankTap}) {
     const borderRadius = BorderRadius.only(
       topLeft: Radius.circular(28.0),
       topRight: Radius.circular(28.0),
     );
+
+    final Widget contentChild = onBlankTap != null
+        ? GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: onBlankTap,
+            child: widget.content,
+          )
+        : widget.content;
 
     return ClipRRect(
       borderRadius: borderRadius,
@@ -383,7 +392,7 @@ class _TabletExpandedLayoutState extends State<_TabletExpandedLayout>
                   data: mq.copyWith(
                     size: Size(constraints.maxWidth, constraints.maxHeight),
                   ),
-                  child: widget.content,
+                  child: contentChild,
                 );
               },
             ),

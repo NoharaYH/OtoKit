@@ -8,6 +8,7 @@ import '../constants/animations.dart';
 import '../constants/colors.dart';
 import '../constants/strings.dart';
 import '../kit_shared/kit_animation_engine.dart';
+import '../kit_shared/kit_bounce_scaler.dart';
 import 'kit_nav_capsule.dart';
 import 'tablet_sidebar_controller.dart';
 
@@ -324,28 +325,38 @@ class _TabletSidebarMinimalState extends State<TabletSidebarMinimal>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        KitNavCapsule(
-          icon: Icons.close,
-          isCircle: true,
+        KitBounceScaler(
           onTap: () => ctrl.close(),
-          isSelected: false,
+          child: KitNavCapsule(
+            icon: Icons.close,
+            isCircle: true,
+            onTap: () => ctrl.close(),
+            isSelected: false,
+          ),
         ),
         const SizedBox(height: 12.0),
-        KitNavCapsule(
-          icon: Icons.settings,
-          isCircle: true,
+        KitBounceScaler(
           onTap: () => nav.openSettings(),
-          isSelected: false,
+          child: KitNavCapsule(
+            icon: Icons.settings,
+            isCircle: true,
+            onTap: () => nav.openSettings(),
+            isSelected: false,
+          ),
         ),
         const SizedBox(height: 12.0),
         Transform.rotate(
           angle: math.pi / 2,
-          child: KitNavCapsule(
-            icon: isExpanded ? Icons.unfold_less : Icons.unfold_more,
-            isCircle: true,
+          child: KitBounceScaler(
             onTap: () =>
                 isExpanded ? ctrl.collapse() : ctrl.expand(),
-            isSelected: false,
+            child: KitNavCapsule(
+              icon: isExpanded ? Icons.unfold_less : Icons.unfold_more,
+              isCircle: true,
+              onTap: () =>
+                  isExpanded ? ctrl.collapse() : ctrl.expand(),
+              isSelected: false,
+            ),
           ),
         ),
         const SizedBox(height: 24.0),
@@ -383,8 +394,7 @@ class _TabletNavItem extends StatelessWidget {
     final contentColor =
         isSelected ? basicColor : basicColor.withValues(alpha: 0.6);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return KitBounceScaler(
       onTap: onTap,
       child: AnimatedContainer(
         duration: UiAnimations.fast,
