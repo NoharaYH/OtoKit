@@ -1,17 +1,29 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../application/shared/navigation_provider.dart';
+import 'constants/animations.dart';
+import 'constants/colors.dart';
 import 'constants/layout_analyzer.dart';
 import 'constants/responsive_layout_scope.dart';
 import 'constants/sizes.dart';
-import 'kit_navigation/kit_nav_rail.dart';
 import 'kit_navigation/nav_deck_overlay.dart';
+import 'kit_navigation/tablet_sidebar_controller.dart';
+import 'kit_navigation/tablet_sidebar_minimal.dart';
 import 'kit_shared/kit_action_circle.dart';
+import 'kit_shared/kit_animation_engine.dart';
 import 'theme/core/app_theme.dart';
 
 const double _defaultPrimaryRatio = 0.5;
 const double _minPaneWidth = 280.0;
+
+// Tablet-only constants (not in global UiSizes).
+const double _tabletNavCapsuleMaxWidthWithText = 166.0;
+const double _tabletStandardSize = 24.0;
+double get _tabletGlassMargin =>
+    (_tabletNavCapsuleMaxWidthWithText + 5 * _tabletStandardSize) / 2.0;
 
 /// 应用级响应式壳层。物理位置为 PageShell 的 child。
 ///
@@ -19,15 +31,32 @@ const double _minPaneWidth = 280.0;
 /// - 读取 MediaQuery 调用纯函数布局分析器
 /// - 将分析结果翻译为布局意图并通过 ResponsiveLayoutScope 下发
 /// - Compact：渲染 NavDeckOverlay + 左侧手势热区
-/// - Medium+：渲染 KitNavRail（持久侧边导航）
-/// - 管理右上角操作按钮区
+/// - Medium+：渲染平板玻璃层 + 两侧热区 + TabletSidebarMinimal
 ///
 /// 不负责：持有业务状态、决定业务模块是否存在、将断点信息上传至 application/
-class OtokitResponsiveShell extends StatelessWidget {
+class OtokitResponsiveShell extends StatefulWidget {
   /// 页面内容（AnimatedSwitcher 包裹的当前页面）
   final Widget child;
 
   const OtokitResponsiveShell({super.key, required this.child});
+
+  @override
+  State<OtokitResponsiveShell> createState() => _OtokitResponsiveShellState();
+}
+
+class _OtokitResponsiveShellState extends State<OtokitResponsiveShell> {
+  TabletSidebarController? _tabletController;
+
+  TabletSidebarController _getOrCreateTabletController() {
+    _tabletController ??= TabletSidebarController();
+    return _tabletController!;
+  }
+
+  @override
+  void dispose() {
+    _tabletController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +85,9 @@ class OtokitResponsiveShell extends StatelessWidget {
       availablePaneCount: paneCount,
       primaryPaneWidth: primaryWidth,
       isCompactNavigation: isCompact,
-      child:
-          isCompact
-              ? _buildCompactLayout(context, child)
-              : _buildExpandedLayout(context, child),
+      child: isCompact
+          ? _buildCompactLayout(context, widget.child)
+          : _buildExpandedLayout(context, widget.child),
     );
   }
 
@@ -75,20 +103,11 @@ class OtokitResponsiveShell extends StatelessWidget {
     );
   }
 
-  /// Medium+ 布局：持久 Rail 导航 + 右侧内容区
+  /// Medium+ 布局：平板玻璃层 + 两侧热区 + 侧边栏
   Widget _buildExpandedLayout(BuildContext context, Widget content) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Row(
-            children: [
-              const KitNavRail(),
-              Expanded(child: content),
-            ],
-          ),
-        ),
-        _buildActionButtons(context, showMenu: false),
-      ],
+    return ChangeNotifierProvider<TabletSidebarController>.value(
+      value: _getOrCreateTabletController(),
+      child: _TabletExpandedLayout(content: content),
     );
   }
 
@@ -115,7 +134,7 @@ class OtokitResponsiveShell extends StatelessWidget {
   }
 
   /// 右上角操作按钮区
-  /// [showMenu] Compact 时显示菜单按钮，Medium+ 时仅显示设置按钮
+  /// [showMenu] Compact 时显示菜单按钮，Medium+ 时由平板玻璃内设置按钮替代，此处不显示
   Widget _buildActionButtons(BuildContext context, {required bool showMenu}) {
     final themeColor =
         Theme.of(context).extension<AppTheme>()?.basic ?? Colors.white;
@@ -135,17 +154,15 @@ class OtokitResponsiveShell extends StatelessWidget {
               if (showMenu) ...[
                 const SizedBox(width: UiSizes.spaceS),
                 Builder(
-                  builder:
-                      (btnCtx) => KitActionCircle(
-                        icon: Icons.menu_open,
-                        color: themeColor,
-                        onTap: () {
-                          final box =
-                              btnCtx.findRenderObject() as RenderBox;
-                          final pos = box.localToGlobal(Offset.zero);
-                          nav.openDeck(anchorY: pos.dy + box.size.height);
-                        },
-                      ),
+                  builder: (btnCtx) => KitActionCircle(
+                    icon: Icons.menu_open,
+                    color: themeColor,
+                    onTap: () {
+                      final box = btnCtx.findRenderObject() as RenderBox;
+                      final pos = box.localToGlobal(Offset.zero);
+                      nav.openDeck(anchorY: pos.dy + box.size.height);
+                    },
+                  ),
                 ),
               ],
             ],
@@ -154,6 +171,234 @@ class OtokitResponsiveShell extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 平板 expanded 布局：自绘玻璃层（含偏移动画）+ 热区 + 侧边栏 + 设置按钮 + 点击收回
+class _TabletExpandedLayout extends StatefulWidget {
+  final Widget content;
+
+  const _TabletExpandedLayout({required this.content});
+
+  @override
+  State<_TabletExpandedLayout> createState() => _TabletExpandedLayoutState();
+}
+
+class _TabletExpandedLayoutState extends State<_TabletExpandedLayout>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _glassOffsetController;
+  late CurvedAnimation _glassOffsetCurve;
+  double _startOffsetX = 0.0;
+  double _endOffsetX = 0.0;
+
+  static const Duration _glassCollapseDelay = Duration(milliseconds: 150);
+
+  @override
+  void initState() {
+    super.initState();
+    _glassOffsetController = AnimationController(
+      vsync: this,
+      duration: KitAnimationEngine.expandDuration,
+    );
+    _glassOffsetCurve = CurvedAnimation(
+      parent: _glassOffsetController,
+      curve: UiAnimations.curveOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _glassOffsetCurve.dispose();
+    _glassOffsetController.dispose();
+    super.dispose();
+  }
+
+  void _applyGlassOffset(double targetOffsetX) {
+    final isCollapsing = targetOffsetX == 0.0;
+    _glassOffsetController.duration = isCollapsing
+        ? KitAnimationEngine.collapseDuration
+        : KitAnimationEngine.expandDuration;
+    _startOffsetX =
+        _startOffsetX + (_endOffsetX - _startOffsetX) * _glassOffsetCurve.value;
+    _endOffsetX = targetOffsetX;
+    _glassOffsetController.reset();
+    if (isCollapsing) {
+      Future.delayed(_glassCollapseDelay, () {
+        if (mounted) _glassOffsetController.forward();
+      });
+    } else {
+      _glassOffsetController.forward();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final top = UiSizes.getTopMarginWithSafeArea(context);
+
+    return Consumer<TabletSidebarController>(
+      builder: (context, ctrl, _) {
+        double targetOffsetX = 0.0;
+        if (ctrl.isOpen && !ctrl.isClosing && ctrl.isExpanded) {
+          final expandOffset = _tabletGlassMargin - 2 * _tabletStandardSize;
+          targetOffsetX = ctrl.side == 0 ? expandOffset : -expandOffset;
+        }
+        if (targetOffsetX != _endOffsetX) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _applyGlassOffset(targetOffsetX);
+          });
+        }
+
+        return Stack(
+          children: [
+            // 1. 玻璃层（含偏移动画）+ content + 设置按钮
+            AnimatedBuilder(
+              animation: _glassOffsetCurve,
+              builder: (context, _) {
+                final offsetX =
+                    _startOffsetX + (_endOffsetX - _startOffsetX) * _glassOffsetCurve.value;
+                return Positioned(
+                  top: top,
+                  left: _tabletGlassMargin + offsetX,
+                  right: _tabletGlassMargin - offsetX,
+                  bottom: 0,
+                  child: _buildTabletGlassChild(context),
+                );
+              },
+            ),
+            // 2. 两侧点击热区
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: _tabletGlassMargin,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => ctrl.open(0),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: _tabletGlassMargin,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => ctrl.open(1),
+              ),
+            ),
+            // 3. 侧边栏（leaving + entry）
+            if (ctrl.isOpen) ...[
+              if (ctrl.leavingSide != null)
+                TabletSidebarMinimal(
+                  key: ValueKey('leave_${ctrl.leavingSide}'),
+                  side: ctrl.leavingSide!,
+                  expanded: ctrl.isExpanded,
+                  isLeaving: true,
+                  onLeaveComplete: ctrl.clearLeaving,
+                ),
+              TabletSidebarMinimal(
+                key: ValueKey('entry_${ctrl.side}'),
+                side: ctrl.side,
+                expanded: ctrl.isExpanded,
+                isLeaving: ctrl.isClosing,
+                onLeaveComplete:
+                    ctrl.isClosing ? ctrl.finalizeClose : null,
+              ),
+            ],
+            // 4. 侧边栏打开且未关闭中时，点击玻璃区域收回
+            if (ctrl.isOpen && !ctrl.isClosing)
+              Positioned(
+                top: top,
+                left: _tabletGlassMargin,
+                right: _tabletGlassMargin,
+                bottom: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => ctrl.close(),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTabletGlassChild(BuildContext context) {
+    const borderRadius = BorderRadius.only(
+      topLeft: Radius.circular(28.0),
+      topRight: Radius.circular(28.0),
+    );
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    UiColors.white.withValues(alpha: 0.50),
+                    UiColors.white.withValues(alpha: 0.24),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          CustomPaint(painter: _TabletGlassStrokePainter()),
+          Positioned.fill(child: widget.content),
+          Positioned(
+            top: 12.0,
+            right: 12.0,
+            child: Consumer<NavigationProvider>(
+              builder: (context, nav, _) {
+                final themeColor =
+                    Theme.of(context).extension<AppTheme>()?.basic ??
+                    Colors.white;
+                return KitActionCircle(
+                  icon: Icons.settings,
+                  color: themeColor,
+                  onTap: () => nav.openSettings(),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabletGlassStrokePainter extends CustomPainter {
+  static const double _topRadius = 28.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndCorners(
+      rect,
+      topLeft: const Radius.circular(_topRadius),
+      topRight: const Radius.circular(_topRadius),
+    );
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Colors.white, Colors.transparent],
+        stops: [0.0, 0.7],
+      ).createShader(rect);
+
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// 根据设备拓扑与铰链物理尺寸计算可用 Pane 数量。

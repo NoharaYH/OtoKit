@@ -75,8 +75,11 @@ class _RootPageState extends State<RootPage> with WidgetsBindingObserver {
             child: ValueListenableBuilder<ResolvedThemeBundle>(
               valueListenable: coordinator.resolvedBundle,
               builder: (context, bundle, _) {
+                final isCompact =
+                    MediaQuery.sizeOf(context).width < 600;
                 return PageShell(
                   backgroundOverride: bundle.buildBackground(context),
+                  showGlassOverlay: isCompact,
                   child: Theme(
                     data: Theme.of(context).copyWith(
                       extensions: [bundle.theme],
