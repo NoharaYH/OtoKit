@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 平板侧边栏专用状态。仅在 _buildExpandedLayout 子树内 provide，手机路径不可见。
+/// 【架构红线·平板专属状态】平板侧边栏专用状态（open/close/expand/collapse/leaving）。
+/// 仅在 OtokitResponsiveShell._buildExpandedLayout 子树内 ChangeNotifierProvider，手机路径不可见、
+/// 不依赖；禁止将此状态放入 NavigationProvider 或全局单例。
 class TabletSidebarController extends ChangeNotifier {
   bool _isOpen = false;
   bool _isExpanded = false;

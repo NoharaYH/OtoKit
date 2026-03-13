@@ -5,6 +5,8 @@ import 'kit_nav_capsule.dart';
 import 'package:provider/provider.dart';
 import '../constants/strings.dart';
 
+/// 【架构红线·手机专属组件】Compact 下的浮层胶囊导航。
+/// 仅由 OtokitResponsiveShell._buildCompactLayout 挂载，平板路径使用 TabletSidebarMinimal，不使用本组件。
 class NavDeckOverlay extends StatefulWidget {
   const NavDeckOverlay({super.key});
 

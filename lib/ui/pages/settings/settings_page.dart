@@ -182,6 +182,7 @@ class _SettingsPageState extends State<SettingsPage>
     final topPadding = MediaQuery.of(context).padding.top;
     final skinExtension =
         Theme.of(context).extension<AppTheme>() ?? const StarTrailsTheme();
+    // 【平板 vs 手机·区分】大屏布局基于 ResponsiveLayoutScope.primaryPaneWidth，不直接判 MediaQuery 断点。
     final scope = ResponsiveLayoutScope.maybeOf(context);
     final width = scope?.primaryPaneWidth ?? MediaQuery.sizeOf(context).width;
     final isLargeScreen = width > 600;
@@ -323,6 +324,7 @@ class _SettingsPageState extends State<SettingsPage>
                             offset: Offset(0, 40 * (1 - _fadeAnimation.value)),
                             child: LayoutBuilder(
                               builder: (context, constraints) {
+                                // 【平板 vs 手机·区分】内容布局用 Scope.primaryPaneWidth 判大屏，与壳层断点一致。
                                 final scope =
                                     ResponsiveLayoutScope.maybeOf(context);
                                 final width = scope?.primaryPaneWidth ??

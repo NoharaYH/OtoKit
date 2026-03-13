@@ -20,7 +20,8 @@ const double _tabletStandardSize = 24.0;
 double get _expandedWidth =>
     _navCapsuleMaxWidthWithText + _tabletStandardSize + 8.0;
 
-/// 平板侧边栏（无全局阴影）。
+/// 【架构红线·平板专属组件】平板侧边栏（无全局阴影）。
+/// 仅由 OtokitResponsiveShell._buildExpandedLayout 挂载，Compact 路径永不使用此组件。
 ///
 /// 布局结构：
 ///   ├── [Expanded] Nav 区：所有功能页按钮，垂直居中

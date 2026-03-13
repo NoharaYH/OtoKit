@@ -18,6 +18,10 @@ class LayoutAnalysis {
 
 /// 纯函数布局分析器。无状态、无副作用、无业务依赖。
 /// 接收逻辑宽度与 displayFeatures，返回布局判定结果。
+///
+/// 【架构红线·断点唯一定义处】平板与手机的宽度分档仅在此处定义，全项目禁止在其他处
+/// 硬编码等价断点做「是否平板/手机」判断。下游仅消费 ResponsiveLayoutScope 下发的意图。
+/// 断点：<600 compact(手机) | 600–839 medium | 840–1199 expanded | ≥1200 large
 LayoutAnalysis analyzeLayout({
   required double widthDp,
   required List<ui.DisplayFeature> displayFeatures,

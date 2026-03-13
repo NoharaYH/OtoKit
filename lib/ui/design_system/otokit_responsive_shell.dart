@@ -28,10 +28,11 @@ double get _tabletGlassMargin =>
 /// 应用级响应式壳层。物理位置为 PageShell 的 child。
 ///
 /// 职责：
-/// - 读取 MediaQuery 调用纯函数布局分析器
+/// - 读取 MediaQuery 调用纯函数布局分析器（断点唯一定义在 layout_analyzer）
 /// - 将分析结果翻译为布局意图并通过 ResponsiveLayoutScope 下发
-/// - Compact：渲染 NavDeckOverlay + 左侧手势热区
-/// - Medium+：渲染平板玻璃层 + 两侧热区 + TabletSidebarMinimal
+/// - 【架构红线·唯一分支点】isCompact ? _buildCompactLayout : _buildExpandedLayout，两条子树严格分离
+/// - Compact（手机）：渲染 NavDeckOverlay + 左侧手势热区 + _buildActionButtons(showMenu: true)
+/// - Medium+（平板）：渲染平板玻璃层 + 两侧热区 + TabletSidebarMinimal，状态仅 TabletSidebarController
 ///
 /// 不负责：持有业务状态、决定业务模块是否存在、将断点信息上传至 application/
 class OtokitResponsiveShell extends StatefulWidget {
@@ -66,6 +67,7 @@ class _OtokitResponsiveShellState extends State<OtokitResponsiveShell> {
       displayFeatures: mq.displayFeatures,
     );
 
+    // 【平板 vs 手机】唯一分支：compact=手机路径，否则=平板路径；下游仅消费 ResponsiveLayoutScope。
     final isCompact = analysis.sizeClass == WindowSizeClass.compact;
 
     final double totalWidth = mq.size.width;
@@ -91,7 +93,7 @@ class _OtokitResponsiveShellState extends State<OtokitResponsiveShell> {
     );
   }
 
-  /// Compact 布局：悬浮胶囊导航 + 左侧手势热区
+  /// 【手机专属】Compact 布局：悬浮胶囊导航 + 左侧手势热区；不包含任何平板状态或组件。
   Widget _buildCompactLayout(BuildContext context, Widget content) {
     return Stack(
       children: [
@@ -103,7 +105,7 @@ class _OtokitResponsiveShellState extends State<OtokitResponsiveShell> {
     );
   }
 
-  /// Medium+ 布局：平板玻璃层 + 两侧热区 + 侧边栏
+  /// 【平板专属】Medium+ 布局：平板玻璃层 + 两侧热区 + 侧边栏；状态仅 TabletSidebarController，手机树不可见。
   Widget _buildExpandedLayout(BuildContext context, Widget content) {
     return ChangeNotifierProvider<TabletSidebarController>.value(
       value: _getOrCreateTabletController(),
@@ -173,7 +175,8 @@ class _OtokitResponsiveShellState extends State<OtokitResponsiveShell> {
   }
 }
 
-/// 平板 expanded 布局：自绘玻璃层（含偏移动画）+ 热区 + 侧边栏 + 设置按钮 + 点击收回
+/// 【平板专属】平板 expanded 布局：自绘玻璃层（含偏移动画）+ 热区 + 侧边栏 + 设置按钮 + 点击收回。
+/// 仅出现在 _buildExpandedLayout 子树，使用 TabletSidebarController，手机路径不包含此类。
 class _TabletExpandedLayout extends StatefulWidget {
   final Widget content;
 
@@ -190,7 +193,17 @@ class _TabletExpandedLayoutState extends State<_TabletExpandedLayout>
   double _startOffsetX = 0.0;
   double _endOffsetX = 0.0;
 
-  static const Duration _glassCollapseDelay = Duration(milliseconds: 150);
+  /// 收缩时 glass 前段保持不动的比例，与侧边栏文字淡出/宽度开始缩的时间对齐（约 100ms/600ms）
+  static const double _glassCollapseHoldStart = 100 / 600;
+
+  void _replaceGlassCurve(Curve curve) {
+    _glassOffsetCurve.dispose();
+    _glassOffsetCurve = CurvedAnimation(
+      parent: _glassOffsetController,
+      curve: curve,
+    );
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
@@ -212,20 +225,28 @@ class _TabletExpandedLayoutState extends State<_TabletExpandedLayout>
     super.dispose();
   }
 
-  void _applyGlassOffset(double targetOffsetX) {
+  void _applyGlassOffset(double targetOffsetX, {bool isClosing = false}) {
     final isCollapsing = targetOffsetX == 0.0;
-    _glassOffsetController.duration = isCollapsing
-        ? KitAnimationEngine.collapseDuration
-        : KitAnimationEngine.expandDuration;
     _startOffsetX =
         _startOffsetX + (_endOffsetX - _startOffsetX) * _glassOffsetCurve.value;
     _endOffsetX = targetOffsetX;
     _glassOffsetController.reset();
+
     if (isCollapsing) {
-      Future.delayed(_glassCollapseDelay, () {
-        if (mounted) _glassOffsetController.forward();
-      });
+      _glassOffsetController.duration = UiAnimations.slow;
+      if (isClosing) {
+        // 侧边栏滑出视口关闭：glass 立即随动，无前段保持
+        _replaceGlassCurve(UiAnimations.curveOut);
+      } else {
+        // 胶囊收缩：前段与侧边栏文字淡出对齐，避免宽卡片盖住 glass
+        _replaceGlassCurve(
+          Interval(_glassCollapseHoldStart, 1.0, curve: UiAnimations.curveOut),
+        );
+      }
+      _glassOffsetController.forward();
     } else {
+      _glassOffsetController.duration = KitAnimationEngine.expandDuration;
+      _replaceGlassCurve(UiAnimations.curveOut);
       _glassOffsetController.forward();
     }
   }
@@ -242,8 +263,9 @@ class _TabletExpandedLayoutState extends State<_TabletExpandedLayout>
           targetOffsetX = ctrl.side == 0 ? expandOffset : -expandOffset;
         }
         if (targetOffsetX != _endOffsetX) {
+          final isClosing = ctrl.isClosing;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _applyGlassOffset(targetOffsetX);
+            if (mounted) _applyGlassOffset(targetOffsetX, isClosing: isClosing);
           });
         }
 

@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'constants/sizes.dart';
 import 'constants/colors.dart';
@@ -6,6 +6,9 @@ import 'theme/core/app_theme.dart';
 
 /// 页面外壳
 /// 提供：背景 + 白色毛玻璃底板 + 内容区域
+///
+/// 【架构红线】不判断设备形态、不包含侧边栏/热区/平板状态；showGlassOverlay 由调用方（如 RootPage）
+/// 根据 compact/expanded 传入，本组件内部无 MediaQuery 或 ResponsiveLayoutScope 分支。
 ///
 /// 使用场景：主页（需要统一背景和毛玻璃效果的页面）
 /// 不使用场景：设置页、WebView 页（这些页面有自己的布局）
@@ -17,7 +20,7 @@ class PageShell extends StatelessWidget {
   /// This is useful for HomePage's cross-fading background.
   final Widget? backgroundOverride;
 
-  /// Whether to show the glass-morphism overlay card.
+  /// Whether to show the glass-morphism overlay card. 【平板 vs 手机】由调用方根据 compact 传入，Compact 为 true，Medium+ 为 false（平板玻璃在 Shell 内）。
   /// Defaults to true.
   final bool showGlassOverlay;
 

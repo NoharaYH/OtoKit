@@ -151,6 +151,7 @@ class _ScoreSyncAssemblyState extends State<ScoreSyncAssembly> {
         provider.isTracking && provider.trackingGameType == widget.gameType;
     final isOtherTracking =
         provider.isTracking && provider.trackingGameType != widget.gameType;
+    // 【平板 vs 手机·区分】双栏/单栏由 Scope.availablePaneCount 决定，不断点判宽；无 Scope 时退化为 1。
     final availablePaneCount =
         ResponsiveLayoutScope.maybeOf(context)?.availablePaneCount ?? 1;
 

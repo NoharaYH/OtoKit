@@ -38,6 +38,8 @@ class UiSizes {
   static const double scoreSyncUsedHeightLxns = 464.0;
 
   // --- Layout Calculations ---
+  /// 【平板 vs 手机·区分】边距档位基于 ResponsiveLayoutScope.primaryPaneWidth（断点来源为 layout_analyzer，此处仅消费）。
+  /// >840 → spaceXL；>600 → spaceL；否则 screenEdgeMargin。业务页不直接判宽度。
   static double getHorizontalMargin(BuildContext context) {
     final scope = ResponsiveLayoutScope.maybeOf(context);
     if (scope == null) return screenEdgeMargin;
