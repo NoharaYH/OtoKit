@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../../../../application/shared/navigation_provider.dart';
 import '../constants/sizes.dart';
 import 'kit_nav_capsule.dart';
-import 'package:provider/provider.dart';
-import '../constants/strings.dart';
+import 'nav_item_registry.dart';
 
 /// 【架构红线·手机专属组件】Compact 下的浮层胶囊导航。
 /// 仅由 OtokitResponsiveShell._buildCompactLayout 挂载，平板路径使用 TabletSidebarMinimal，不使用本组件。
@@ -75,8 +76,8 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
                     ),
                   ),
                 ),
-                // 2. 悬浮胶囊队列绘制区
-                _buildCapsuleStack(context, nav),
+                // 2. 悬浮胶囊队列绘制区（Positioned.fill 避免无界约束导致 RenderOpacity NEEDS-LAYOUT）
+                Positioned.fill(child: _buildCapsuleStack(context, nav)),
               ],
             );
           },
@@ -88,8 +89,8 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
   Widget _buildCapsuleStack(BuildContext context, NavigationProvider nav) {
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // 预估整个胶囊堆的高度: 3 个主按钮 (55.2h + 14.4gap) + 1 行底部圆按钮 (55.2 + gap)
-    // 55.2 * 3 + 14.4 * 2 + 55.2 (这里不严格等于原来，只是粗略用作翻转基准)
+    // 预估整个胶囊堆的高度，用于触底时是否反转展开方向
+    const double capHeight = 55.2;
     const estimatedDeckHeight = 250.0;
 
     // 是否触底需要反转重心：锚点距离底部如果小于整个容器，则向上展开
@@ -98,6 +99,8 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
 
     // 这里的gap为卡片间距。原先为12(spaceS)，按增加20%的要求，调整为 12 * 1.2 = 14.4
     const double capGap = 14.4;
+    // Positioned 必须带 width/height，否则子节点收到无界约束导致 RenderOpacity NEEDS-LAYOUT。
+    const double capWidth = 200.0; // 240 缩短三分之一
 
     // 为了实现"由锚点出发顺次错开弹起"的效果，根据反转状态决定渲染起始点
     // 这里采用基线纵坐标来简化计算，默认左边缘距离屏幕 5%
@@ -109,30 +112,18 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
           )
         : nav.anchorY;
 
-    // 构建所有需要展示的标签项目
-    final items = [
-      _CapsuleItemData(
-        tag: PageTag.scoreSync,
-        icon: Icons.sync,
-        subLabel: 'score data sync',
-        label: UiStrings.navScoreSync,
-        customColor: Colors.green,
-      ),
-      _CapsuleItemData(
-        tag: PageTag.musicData,
-        icon: Icons.library_music,
-        subLabel: 'music data base',
-        label: UiStrings.navMusicData,
-        customColor: Colors.blue,
-      ),
-      // 预留的无功能占位卡
-      _CapsuleItemData(
-        tag: null,
-        icon: Icons.more_horiz,
-        subLabel: 'coming soon',
-        label: UiStrings.navComingSoon,
-      ),
-    ];
+    // 导航项来自唯一定义处，与平板 TabletSidebarMinimal 共用
+    final items = NavItemRegistry.entries
+        .map(
+          (e) => _CapsuleItemData(
+            tag: e.tag,
+            icon: e.icon,
+            label: e.label,
+            subLabel: e.subLabel,
+            customColor: e.color,
+          ),
+        )
+        .toList();
 
     List<Widget> children = [];
 
@@ -159,27 +150,32 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
       );
 
       // 垂直定位固定，由 _Slide 负责 X 轴进入
-      final currentY = startY + i * (55.2 + capGap); // 55.2高度 + gap间距
+      final currentY = startY + i * (capHeight + capGap);
 
       children.add(
         Positioned(
           left: leftX,
           top: currentY,
+          width: capWidth,
+          height: capHeight,
           child: Transform.translate(
             offset: Offset(slideTween.evaluate(slideCurve), 0),
             child: Opacity(
               opacity: opacityCurve.value,
-              child: KitNavCapsule(
-                icon: items[i].icon,
-                subLabel: items[i].subLabel,
-                label: items[i].label,
-                customColor: items[i].customColor,
-                // 如果是假卡，不产生高亮
-                isSelected:
-                    items[i].tag != null && nav.currentTag == items[i].tag,
-                onTap: () {
-                  if (items[i].tag != null) nav.switchTo(items[i].tag!);
-                },
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: KitNavCapsule(
+                  icon: items[i].icon,
+                  subLabel: items[i].subLabel,
+                  label: items[i].label,
+                  customColor: items[i].customColor,
+                  // 如果是假卡，不产生高亮
+                  isSelected:
+                      items[i].tag != null && nav.currentTag == items[i].tag,
+                  onTap: () {
+                    if (items[i].tag != null) nav.switchTo(items[i].tag!);
+                  },
+                ),
               ),
             ),
           ),
@@ -188,7 +184,7 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
     }
 
     // 底部附加小圆球按钮，与上面胶囊卡片的间距对齐为相同的间距(capGap)
-    final bottomY = startY + items.length * (55.2 + capGap);
+    final bottomY = startY + items.length * (capHeight + capGap);
 
     // 两个按钮分开出场，内侧（设置）先出，外侧（空）后出
     final bottomDelayBase = isReverse ? -1 : items.length;
@@ -219,6 +215,8 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
       Positioned(
         left: leftX,
         top: bottomY,
+        width: capHeight,
+        height: capHeight,
         child: Transform.translate(
           offset: Offset(
             Tween<double>(begin: -150, end: 0).evaluate(innerSlideCurve),
@@ -241,8 +239,10 @@ class _NavDeckOverlayState extends State<NavDeckOverlay>
     // 外侧空白占位按钮
     children.add(
       Positioned(
-        left: leftX + 55.2 + UiSizes.spaceS, // 设置在内侧按钮的右边 (尺寸55.2+间距12)
+        left: leftX + capHeight + UiSizes.spaceS,
         top: bottomY,
+        width: capHeight,
+        height: capHeight,
         child: Transform.translate(
           offset: Offset(
             Tween<double>(begin: -150, end: 0).evaluate(outerSlideCurve),

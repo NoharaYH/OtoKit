@@ -59,17 +59,20 @@ class RootThemeCoordinator {
     final chuSkin = gp.resolvedTheme(ThemeCatalog.findThemeById(gp.chuSkinId));
     final theme = maiSkin.lerp(chuSkin, t);
 
-    // 独立模式：Stack + Opacity 跨域渐隐过渡
+    // 独立模式：Stack + Opacity 跨域渐隐过渡。
+    // 子节点必须用 Positioned.fill 包裹，否则 Stack 给非定位子节点无界约束，导致 RenderOpacity NEEDS-LAYOUT（仅中二页触发）。
     return ResolvedThemeBundle(
       theme: theme,
       buildBackground: (ctx) => Stack(
         fit: StackFit.expand,
         children: [
-          if (t < 1.0) maiSkin.buildBackground(ctx),
+          if (t < 1.0) Positioned.fill(child: maiSkin.buildBackground(ctx)),
           if (t > 0.0)
-            Opacity(
-              opacity: t,
-              child: chuSkin.buildBackground(ctx),
+            Positioned.fill(
+              child: Opacity(
+                opacity: t,
+                child: chuSkin.buildBackground(ctx),
+              ),
             ),
         ],
       ),

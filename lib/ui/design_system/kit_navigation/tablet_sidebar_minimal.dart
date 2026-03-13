@@ -6,10 +6,10 @@ import 'package:provider/provider.dart';
 import '../../../application/shared/navigation_provider.dart';
 import '../constants/animations.dart';
 import '../constants/colors.dart';
-import '../constants/strings.dart';
 import '../kit_shared/kit_animation_engine.dart';
 import '../kit_shared/kit_bounce_scaler.dart';
 import 'kit_nav_capsule.dart';
+import 'nav_item_registry.dart';
 import 'tablet_sidebar_controller.dart';
 
 // Private constants for tablet sidebar (not in global UiSizes).
@@ -197,29 +197,16 @@ class _TabletSidebarMinimalState extends State<TabletSidebarMinimal>
     super.dispose();
   }
 
-  static List<_NavItemData> get _navItems => [
-        _NavItemData(
-          PageTag.scoreSync,
-          Icons.sync,
-          UiStrings.navScoreSync,
-          'score data sync',
-          Colors.green,
-        ),
-        _NavItemData(
-          PageTag.musicData,
-          Icons.library_music,
-          UiStrings.navMusicData,
-          'music data base',
-          Colors.blue,
-        ),
-        _NavItemData(
-          null,
-          Icons.more_horiz,
-          UiStrings.navComingSoon,
-          'coming soon',
-          Colors.grey,
-        ),
-      ];
+  /// 导航项来自唯一定义处，与手机 NavDeckOverlay 共用
+  static List<_NavItemData> get _navItems => NavItemRegistry.entries
+      .map((e) => _NavItemData(
+            e.tag,
+            e.icon,
+            e.label,
+            e.subLabel,
+            e.color ?? Colors.grey,
+          ))
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -448,6 +435,7 @@ class _TabletNavItem extends StatelessWidget {
                   child: Opacity(
                     opacity: labelOpacity.clamp(0.0, 1.0),
                     child: SizedBox(
+                      width: _navCapsuleMaxWidthWithText,
                       height: 38.4,
                       child: Column(
                         mainAxisSize: MainAxisSize.max,

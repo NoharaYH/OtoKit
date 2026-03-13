@@ -42,15 +42,15 @@ class VerseTheme extends AppTheme {
     final double globeBeforeSize = isCompact ? 225.0 : 450.0; // ::before 450/290
     final double globeCrossSize = isCompact ? 200.0 : 420.0;
 
-    // ── L2 城镇装饰 ──
-    final double townW = isCompact ? double.infinity : 1500.0;
+    // ── L2 城镇装饰 ──（compact 用屏宽，避免 double.infinity 导致 BoxConstraints forces an infinite width）
+    final double townW = isCompact ? w : 1500.0;
     final double townH = isCompact ? 280.0 : 733.0;
     final double townLeft = isCompact ? 0.0 : -515.0;
 
-    // ── L3 边角层（官网 SP 88、opacity 0.8）──
-    final double topRightW = isCompact ? double.infinity : 845.0;
+    // ── L3 边角层（官网 SP 88、opacity 0.8）──；Positioned 必须带 width/height，否则 Opacity 收到无界约束导致 NEEDS-LAYOUT
+    final double topRightW = isCompact ? w : 845.0;
     final double? topRightH = isCompact ? 88.0 : null;
-    final double bottomLeftW = isCompact ? double.infinity : 923.0;
+    final double bottomLeftW = isCompact ? w : 923.0;
     final double? bottomLeftH = isCompact ? 88.0 : null;
 
     // ── L4 氛围层：腰带左右、漂浮文案（两档）──
@@ -163,6 +163,8 @@ class VerseTheme extends AppTheme {
         Positioned(
           top: 0,
           right: 0,
+          width: topRightH != null ? w : topRightW,
+          height: topRightH ?? 200,
           child: Opacity(
             opacity: 0.8,
             child: SizedBox(
@@ -179,6 +181,8 @@ class VerseTheme extends AppTheme {
         Positioned(
           bottom: 0,
           left: 0,
+          width: bottomLeftH != null ? w : bottomLeftW,
+          height: bottomLeftH ?? 200,
           child: Opacity(
             opacity: 0.8,
             child: SizedBox(

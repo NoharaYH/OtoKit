@@ -248,8 +248,7 @@ class _SettingsPageState extends State<SettingsPage>
                   _expansionAnimation,
                 ]),
                 builder: (context, _) {
-                  // 平板模式：顶部不播扩张动画，仅保留「返回首页」常驻；手机模式：保留原有 Phase A/B 动画
-                  // 扁平层级：任意返回均直接回功能页，与右侧二级淡出效果一致
+                  // 平板：顶部仅「返回首页」常驻，返回=关闭设置；手机：Phase A/B 动画，二级页返回=先回分类列表
                   final headerChild = isLargeScreen
                       ? SettingHeader(
                           title: '返回首页',
@@ -295,7 +294,7 @@ class _SettingsPageState extends State<SettingsPage>
                                               .color,
                                       expansionProgress:
                                           _expansionAnimation.value,
-                                      onBack: _handleBack,
+                                      onBack: _handleCategoryBack,
                                     ),
                                   ),
                                 ),
@@ -490,8 +489,20 @@ class _SettingsPageState extends State<SettingsPage>
     );
   }
 
-  /// 扁平层级：任意选项内返回均直接回功能页，淡出与右侧二级内容一致（500ms easeInOutQuart）
-  void _handleBack() {
+  /// 手机：仅退回分类列表，不关闭设置 overlay（恢复提交 671f323 前的逻辑）
+  void _handleCategoryBack() {
+    _expansionController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _activeCategoryIndex = null;
+          _cachedSubPage = null;
+        });
+      }
+    });
+  }
+
+  /// 关闭设置 overlay，回到功能页（淡出 500ms easeInOutQuart）
+  void _handleCloseSettings() {
     _fadeController.reverse().then((_) {
       if (mounted) {
         setState(() {
@@ -501,5 +512,21 @@ class _SettingsPageState extends State<SettingsPage>
         context.read<NavigationProvider>().closeSettings();
       }
     });
+  }
+
+  /// 统一返回入口：【平板】任意返回均关闭设置；【手机】二级页先退回分类列表，一级再关闭设置。
+  void _handleBack() {
+    final scope = ResponsiveLayoutScope.maybeOf(context);
+    final w = scope?.primaryPaneWidth ?? MediaQuery.sizeOf(context).width;
+    final isLarge = w > 600;
+    if (isLarge) {
+      _handleCloseSettings();
+      return;
+    }
+    if (_activeCategoryIndex != null) {
+      _handleCategoryBack();
+      return;
+    }
+    _handleCloseSettings();
   }
 }
