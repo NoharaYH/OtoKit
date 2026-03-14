@@ -76,53 +76,59 @@ class GlassOverlaySettingsContent extends StatelessWidget {
 
     const warningColor = Color(0xFFA0A0A0); // RGB(160,160,160)
 
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _GlassToggleChip(
-          label: '不透明度',
-          icon: Icons.opacity_rounded,
-          isSelected: prefs.opacityEnabled,
-          enabled: true,
-          onTap: () {
-            final next = prefs.copyWith(opacityEnabled: !prefs.opacityEnabled);
-            gp.setGlassOverlayPrefs(
-              next.opacityEnabled
-                  ? next
-                  : next.copyWith(blurEnabled: false, strokeEnabled: false),
-            );
-          },
+        Row(
+          children: [
+            _GlassToggleChip(
+              label: '不透明度',
+              icon: Icons.opacity_rounded,
+              isSelected: prefs.opacityEnabled,
+              enabled: true,
+              onTap: () {
+                final next = prefs.copyWith(
+                  opacityEnabled: !prefs.opacityEnabled,
+                );
+                gp.setGlassOverlayPrefs(
+                  next.opacityEnabled
+                      ? next
+                      : next.copyWith(blurEnabled: false, strokeEnabled: false),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
+            _GlassToggleChip(
+              label: '模糊',
+              icon: Icons.blur_on_rounded,
+              isSelected: prefs.blurEnabled,
+              enabled: prefs.opacityEnabled,
+              onTap: prefs.opacityEnabled
+                  ? () => gp.setGlassOverlayPrefs(
+                      prefs.copyWith(blurEnabled: !prefs.blurEnabled),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            _GlassToggleChip(
+              label: '描边',
+              icon: Icons.border_outer_rounded,
+              isSelected: prefs.strokeEnabled,
+              enabled: prefs.opacityEnabled,
+              onTap: prefs.opacityEnabled
+                  ? () => gp.setGlassOverlayPrefs(
+                      prefs.copyWith(strokeEnabled: !prefs.strokeEnabled),
+                    )
+                  : null,
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        _GlassToggleChip(
-          label: '模糊',
-          icon: Icons.blur_on_rounded,
-          isSelected: prefs.blurEnabled,
-          enabled: prefs.opacityEnabled,
-          onTap: prefs.opacityEnabled
-              ? () => gp.setGlassOverlayPrefs(
-                    prefs.copyWith(blurEnabled: !prefs.blurEnabled),
-                  )
-              : null,
-        ),
-        const SizedBox(width: 8),
-        _GlassToggleChip(
-          label: '描边',
-          icon: Icons.border_outer_rounded,
-          isSelected: prefs.strokeEnabled,
-          enabled: prefs.opacityEnabled,
-          onTap: prefs.opacityEnabled
-              ? () => gp.setGlassOverlayPrefs(
-                    prefs.copyWith(strokeEnabled: !prefs.strokeEnabled),
-                  )
-              : null,
-        ),
-        const SizedBox(width: 8),
-        Flexible(
+        ExpansionAnimator(
+          isExpanded: prefs.blurEnabled,
           child: Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: 12),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
@@ -134,15 +140,12 @@ class GlassOverlaySettingsContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    '若开启模糊会\n极大增加性能开销',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: warningColor,
-                      height: 1.2,
-                    ),
-                    softWrap: true,
+                Text(
+                  '警告: 开启模糊效果会极大增加性能开销, 导致帧数降低和发热',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: warningColor,
+                    height: 1.2,
                   ),
                 ),
               ],
@@ -207,10 +210,13 @@ class _GlassToggleChip extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight:
-                      effectiveSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: effectiveSelected
+                      ? FontWeight.w700
+                      : FontWeight.w500,
                   color: enabled
-                      ? (effectiveSelected ? UiColors.grey800 : UiColors.grey400)
+                      ? (effectiveSelected
+                            ? UiColors.grey800
+                            : UiColors.grey400)
                       : UiColors.grey300,
                 ),
               ),
